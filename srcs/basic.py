@@ -57,6 +57,13 @@ class InvalidSyntaxError(Error):
         super().__init__(position_start, position_end, "Invalid Syntax", details)
 
 
+class RunTimeError(Error):
+    def __init__(
+        self, position_start: "Position", position_end: "Position", details: str = ""
+    ) -> None:
+        super().__init__(position_start, position_end, "Runtime Error", details)
+
+
 class Position:
     def __init__(
         self, index: int, line: int, column: int, file_name: str, file_text: str
@@ -195,6 +202,8 @@ class Lexer:
 class NumberNode:
     def __init__(self, token: "Token") -> None:
         self.token = token
+        self.position_start = self.token.position_start
+        self.position_end = self.token.position_end
 
     def __repr__(self) -> str:
         return f"{self.token}"
@@ -204,6 +213,8 @@ class UnaryOperationNode:
     def __init__(self, operator_token: "Token", node: "NumberNode") -> None:
         self.operator_token = operator_token
         self.node = node
+        self.position_start = self.operator_token.position_start
+        self.position_end = self.node.position_end
 
     def __repr__(self) -> str:
         return f"({self.operator_token}, {self.node})"
@@ -216,6 +227,8 @@ class BinaryOperationNode:
         self.left_node = left_node
         self.operator_token = operator_token
         self.right_node = right_node
+        self.position_start = self.left_node.position_start
+        self.position_end = self.right_node.position_end
 
     def __repr__(self) -> str:
         return f"({self.left_node}, {self.operator_token}, {self.right_node})"
@@ -327,6 +340,122 @@ class Parser:
         return response.success(left_node)
 
 
+class RunTimeResult:
+    def __init__(self) -> None:
+        self.value = None
+        self.error = None
+
+    def register(self, result: "RunTimeResult") -> "RunTimeResult":
+        if result.error:
+            self.error = result.error
+        return result.value
+
+    def success(self, value: "Number") -> "RunTimeResult":
+        self.value = value
+        return self
+
+    def failure(self, error: "Error") -> "RunTimeResult":
+        self.error = error
+        return self
+
+
+class Number:
+    def __init__(self, value: int | float) -> None:
+        self.value = value
+
+        self.set_position()
+
+    def __repr__(self) -> str:
+        return f"{self.value}"
+
+    def set_position(
+        self, position_start: "Position" = None, position_end: "Position" = None
+    ) -> "Number":
+        self.position_start = position_start
+        self.position_end = position_end
+        return self
+
+    def added_to(self, other: "Number") -> tuple["Number", Error]:
+        if isinstance(other, Number):
+            return Number(self.value + other.value), None
+
+    def subtracted_by(self, other: "Number") -> tuple["Number", Error]:
+        if isinstance(other, Number):
+            return Number(self.value - other.value), None
+
+    def multiplied_by(self, other: "Number") -> tuple["Number", Error]:
+        if isinstance(other, Number):
+            return Number(self.value * other.value), None
+
+    def divided_by(self, other: "Number") -> tuple["Number", Error]:
+        if isinstance(other, Number):
+            if other.value == 0:
+                return None, RunTimeError(
+                    other.position_start, other.position_end, "Division by zero"
+                )
+            return Number(self.value / other.value), None
+
+
+class Interpreter:
+    def __init__(self) -> None:
+        pass
+
+    def visit(self, node) -> float:
+        method_name = f"visit_{type(node).__name__}"
+        method = getattr(self, method_name, self.no_visit_method)
+        return method(node)
+
+    def no_visit_method(self, node) -> None:
+        raise Exception(f"No visit_{type(node).__name__} method defined")
+
+    def visit_NumberNode(self, node: "NumberNode") -> float:
+        return RunTimeResult().success(
+            Number(node.token.value).set_position(
+                node.position_start, node.position_end
+            )
+        )
+
+    def visit_UnaryOperationNode(self, node: "UnaryOperationNode") -> float:
+        response = RunTimeResult()
+        number = response.register(self.visit(node.node))
+        if response.error:
+            return response
+
+        error = None
+        if node.operator_token.type == TOKEN_MINUS:
+            number, error = number.multiplied_by(Number(-1))
+
+        if error:
+            return response.failure(error)
+        return response.success(
+            number.set_position(node.position_start, node.position_end)
+        )
+
+    def visit_BinaryOperationNode(self, node: "BinaryOperationNode") -> float:
+        response = RunTimeResult()
+        left_node = response.register(self.visit(node.left_node))
+        if response.error:
+            return response
+        right_node = response.register(self.visit(node.right_node))
+        if response.error:
+            return response
+
+        if node.operator_token.type == TOKEN_PLUS:
+            result, error = left_node.added_to(right_node)
+        elif node.operator_token.type == TOKEN_MINUS:
+            result, error = left_node.subtracted_by(right_node)
+        elif node.operator_token.type == TOKEN_MUL:
+            result, error = left_node.multiplied_by(right_node)
+        elif node.operator_token.type == TOKEN_DIV:
+            result, error = left_node.divided_by(right_node)
+
+        if error:
+            return response.failure(error)
+        return response.success(
+            result.set_position(node.position_start, node.position_end)
+        )
+
+
 def run(file_name: str, text: str) -> tuple[list["Token"], Error]:
     lexer = Lexer(file_name, text)
     tokens, error = lexer.make_tokens()
@@ -335,5 +464,10 @@ def run(file_name: str, text: str) -> tuple[list["Token"], Error]:
 
     parser = Parser(tokens)
     ast = parser.parse()
+    if ast.error:
+        return [], ast.error
 
-    return ast.node, ast.error
+    interpreter = Interpreter()
+    result = interpreter.visit(ast.node)
+
+    return result.value, result.error
