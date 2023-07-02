@@ -59,9 +59,35 @@ class InvalidSyntaxError(Error):
 
 class RunTimeError(Error):
     def __init__(
-        self, position_start: "Position", position_end: "Position", details: str = ""
+        self,
+        position_start: "Position",
+        position_end: "Position",
+        details: str = "",
+        context: "Context" = None,
     ) -> None:
         super().__init__(position_start, position_end, "Runtime Error", details)
+        self.context = context
+
+    def as_string(self) -> str:
+        result = self.generate_traceback()
+        result += f"{self.name}: {self.details}"
+        result += "\n\n" + self.string_with_arrows(
+            self.position_start.file_text, self.position_start, self.position_end
+        )
+        return result
+
+    def generate_traceback(self) -> str:
+        result = ""
+        position = self.position_start
+        context = self.context
+        while context:
+            result = (
+                f"  File {position.file_name}, line {position.line + 1}, in {context.display_name}\n"
+                + result
+            )
+            position = context.parent_entry_position
+            context = context.parent
+        return "Traceback (most recent call last):\n" + result
 
 
 class Position:
@@ -364,6 +390,7 @@ class Number:
         self.value = value
 
         self.set_position()
+        self.set_context()
 
     def __repr__(self) -> str:
         return f"{self.value}"
@@ -375,49 +402,70 @@ class Number:
         self.position_end = position_end
         return self
 
+    def set_context(self, context: "Context" = None) -> "Number":
+        self.context = context
+        return self
+
     def added_to(self, other: "Number") -> tuple["Number", Error]:
         if isinstance(other, Number):
-            return Number(self.value + other.value), None
+            return Number(self.value + other.value).set_context(self.context), None
 
     def subtracted_by(self, other: "Number") -> tuple["Number", Error]:
         if isinstance(other, Number):
-            return Number(self.value - other.value), None
+            return Number(self.value - other.value).set_context(self.context), None
 
     def multiplied_by(self, other: "Number") -> tuple["Number", Error]:
         if isinstance(other, Number):
-            return Number(self.value * other.value), None
+            return Number(self.value * other.value).set_context(self.context), None
 
     def divided_by(self, other: "Number") -> tuple["Number", Error]:
         if isinstance(other, Number):
             if other.value == 0:
                 return None, RunTimeError(
-                    other.position_start, other.position_end, "Division by zero"
+                    other.position_start,
+                    other.position_end,
+                    "Division by zero",
+                    self.context,
                 )
-            return Number(self.value / other.value), None
+            return Number(self.value / other.value).set_context(self.context), None
+
+
+class Context:
+    def __init__(
+        self,
+        display_name: str,
+        parent: "Context" = None,
+        parent_entry_position: int = None,
+    ) -> None:
+        self.display_name = display_name
+        self.parent = parent
+        self.parent_entry_position = parent_entry_position
 
 
 class Interpreter:
     def __init__(self) -> None:
         pass
 
-    def visit(self, node) -> float:
+    def visit(self, node, context: "Context") -> float:
         method_name = f"visit_{type(node).__name__}"
         method = getattr(self, method_name, self.no_visit_method)
-        return method(node)
+        return method(node, context)
 
-    def no_visit_method(self, node) -> None:
+    def no_visit_method(self, node, context: "Context") -> None:
         raise Exception(f"No visit_{type(node).__name__} method defined")
 
-    def visit_NumberNode(self, node: "NumberNode") -> float:
+    def visit_NumberNode(self, node: "NumberNode", context: "Context") -> float:
         return RunTimeResult().success(
-            Number(node.token.value).set_position(
-                node.position_start, node.position_end
-            )
+            Number(node.token.value)
+            .set_context(context)
+            .set_position(node.position_start, node.position_end)
         )
 
-    def visit_UnaryOperationNode(self, node: "UnaryOperationNode") -> float:
+    def visit_UnaryOperationNode(
+        self, node: "UnaryOperationNode", context: "Context"
+    ) -> float:
         response = RunTimeResult()
-        number = response.register(self.visit(node.node))
+        number = response.register(self.visit(node.node, context))
         if response.error:
             return response
 
@@ -431,12 +479,14 @@ class Interpreter:
             number.set_position(node.position_start, node.position_end)
         )
 
-    def visit_BinaryOperationNode(self, node: "BinaryOperationNode") -> float:
+    def visit_BinaryOperationNode(
+        self, node: "BinaryOperationNode", context: "Context"
+    ) -> float:
         response = RunTimeResult()
-        left_node = response.register(self.visit(node.left_node))
+        left_node = response.register(self.visit(node.left_node, context))
         if response.error:
             return response
-        right_node = response.register(self.visit(node.right_node))
+        right_node = response.register(self.visit(node.right_node, context))
         if response.error:
             return response
 
@@ -468,6 +518,7 @@ def run(file_name: str, text: str) -> tuple[list["Token"], Error]:
         return [], ast.error
 
     interpreter = Interpreter()
-    result = interpreter.visit(ast.node)
+    context = Context("<program>")
+    result = interpreter.visit(ast.node, context)
 
     return result.value, result.error
