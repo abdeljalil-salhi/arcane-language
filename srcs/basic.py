@@ -118,9 +118,68 @@ class Lexer:
         if dot_count == 0:
             return Token(TOKEN_INT, int(number_string))
         return Token(TOKEN_FLOAT, float(number_string))
+
+class NumberNode:
+    def __init__(self, token: 'Token') -> None:
+        self.token = token
     
+    def __repr__(self) -> str:
+        return f'{self.token}'
+
+class BinaryOperationNode:
+    def __init__(self, left_node: 'NumberNode', operator_token: 'Token', right_node: 'NumberNode') -> None:
+        self.left_node = left_node
+        self.operator_token = operator_token
+        self.right_node = right_node
+    
+    def __repr__(self) -> str:
+        return f'({self.left_node}, {self.operator_token}, {self.right_node})'
+
+class Parser:
+    def __init__(self, tokens: list['Token']) -> None:
+        self.tokens = tokens
+        self.token_index = -1
+        
+        self.advance()
+    
+    def advance(self) -> None:
+        self.token_index += 1
+        if self.token_index < len(self.tokens):
+            self.current_token = self.tokens[self.token_index]
+        return self.current_token
+
+    def parse(self) -> 'BinaryOperationNode':
+        return self.expr()
+    
+    def factor(self) -> 'NumberNode':
+        token = self.current_token
+        if token.type in (TOKEN_INT, TOKEN_FLOAT):
+            self.advance()
+            return NumberNode(token)
+    
+    def term(self) -> 'BinaryOperationNode':
+        return self.binary_operation(self.factor, (TOKEN_MUL, TOKEN_DIV))
+    
+    def expr(self) -> 'BinaryOperationNode':
+        return self.binary_operation(self.term, (TOKEN_PLUS, TOKEN_MINUS))
+    
+    def binary_operation(self, function, operation_tokens: list['Token']) -> 'BinaryOperationNode':
+        left_node = function()
+        while self.current_token.type in operation_tokens:
+            operator_token = self.current_token
+            self.advance()
+            right_node = function()
+            left_node = BinaryOperationNode(left_node, operator_token, right_node)
+        return left_node
+        
+
 def run(file_name: str, text: str) -> tuple[list['Token'], Error]:
     lexer = Lexer(file_name, text)
     tokens, error = lexer.make_tokens()
+    if error:
+        return [], error
+    
+    parser = Parser(tokens)
+    ast = parser.parse()
 
-    return tokens, error
+    return ast, None
