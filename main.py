@@ -1,11 +1,11 @@
 from srcs.basic import run
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         while True:
             line = input("basic > ")
-            result, error = run('<stdin>', line)
-            
+            result, error = run("<stdin>", line)
+
             if error:
                 print(error.as_string())
             else:
@@ -13,4 +13,3 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print("\nBye!")
         exit(0)
-        
