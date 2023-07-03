@@ -32,4 +32,8 @@ KEYWORDS            = [
     "and",
     "or",
     "not",
+    "if",
+    "then",
+    "elif",
+    "else",
 ]

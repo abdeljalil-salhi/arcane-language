@@ -32,6 +32,9 @@ class Number:
             .set_position(self.position_start, self.position_end)
         )
 
+    def is_true(self) -> bool:
+        return self.value != 0
+
     def added_to(self, other: "Number") -> tuple["Number", BaseError]:
         if isinstance(other, Number):
             return Number(self.value + other.value).set_context(self.context), None

@@ -5,7 +5,10 @@ if __name__ == "__main__":
         while True:
             line = input("imenox > ")
             result, error = run("<stdin>", line)
-            print(error.as_string() if error else result)
+            if error:
+                print(error.as_string())
+            elif result:
+                print(result)
 
     except KeyboardInterrupt:
         print("\nBye!")

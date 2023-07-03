@@ -8,6 +8,7 @@ from .base.constants.tokens import *
 from .errors.run_time_error import RunTimeError
 from .base.nodes.variable_access_node import VariableAccessNode
 from .base.nodes.variable_assign_node import VariableAssignNode
+from .base.nodes.if_node import IfNode
 
 
 class Interpreter:
@@ -123,3 +124,24 @@ class Interpreter:
             return response
         context.symbol_table.set(variable_name, value)
         return response.success(value)
+
+    def visit_IfNode(self, node: "IfNode", context: "Context") -> float:
+        response = RunTimeResult()
+
+        for condition, expr in node.cases:
+            condition_value = response.register(self.visit(condition, context))
+            if response.error:
+                return response
+            if condition_value.is_true():
+                expr_value = response.register(self.visit(expr, context))
+                if response.error:
+                    return response
+                return response.success(expr_value)
+
+        if node.else_case:
+            else_value = response.register(self.visit(node.else_case, context))
+            if response.error:
+                return response
+            return response.success(else_value)
+
+        return response.success(None)

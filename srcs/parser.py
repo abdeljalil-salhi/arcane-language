@@ -7,6 +7,7 @@ from .base.nodes.number_node import NumberNode
 from .base.nodes.unary_operation_node import UnaryOperationNode
 from .base.nodes.variable_access_node import VariableAccessNode
 from .base.nodes.variable_assign_node import VariableAssignNode
+from .base.nodes.if_node import IfNode
 
 
 class Parser:
@@ -61,6 +62,12 @@ class Parser:
                     "Expected ')'",
                 )
             )
+
+        elif token.matches(TOKEN_KEYWORD, "if"):
+            if_expr = response.register(self.if_expr())
+            if response.error:
+                return response
+            return response.success(if_expr)
 
         return response.failure(
             InvalidSyntaxError(
@@ -125,6 +132,66 @@ class Parser:
 
     def arith_expr(self) -> "BinaryOperationNode":
         return self.binary_operation(self.term, (TOKEN_PLUS, TOKEN_MINUS))
+
+    def if_expr(self) -> "BinaryOperationNode":
+        response = ParseResult()
+        cases = []
+        else_case = None
+
+        if not self.current_token.matches(TOKEN_KEYWORD, "if"):
+            return response.failure(
+                InvalidSyntaxError(
+                    self.current_token.position_start,
+                    self.current_token.position_end,
+                    "Expected 'if'",
+                )
+            )
+        response.register_advance(self.advance)
+        condition = response.register(self.expr())
+        if response.error:
+            return response
+
+        if not self.current_token.matches(TOKEN_KEYWORD, "then"):
+            return response.failure(
+                InvalidSyntaxError(
+                    self.current_token.position_start,
+                    self.current_token.position_end,
+                    "Expected 'then'",
+                )
+            )
+        response.register_advance(self.advance)
+        expr = response.register(self.expr())
+        if response.error:
+            return response
+        cases.append((condition, expr))
+
+        while self.current_token.matches(TOKEN_KEYWORD, "elif"):
+            response.register_advance(self.advance)
+            condition = response.register(self.expr())
+            if response.error:
+                return response
+
+            if not self.current_token.matches(TOKEN_KEYWORD, "then"):
+                return response.failure(
+                    InvalidSyntaxError(
+                        self.current_token.position_start,
+                        self.current_token.position_end,
+                        "Expected 'then'",
+                    )
+                )
+            response.register_advance(self.advance)
+            expr = response.register(self.expr())
+            if response.error:
+                return response
+            cases.append((condition, expr))
+
+        if self.current_token.matches(TOKEN_KEYWORD, "else"):
+            response.register_advance(self.advance)
+            else_case = response.register(self.expr())
+            if response.error:
+                return response
+
+        return response.success(IfNode(cases, else_case))
 
     def expr(self) -> "BinaryOperationNode":
         response = ParseResult()
