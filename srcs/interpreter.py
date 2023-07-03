@@ -12,6 +12,9 @@ from .base.token import (
     TOKEN_MOD,
     TOKEN_POW,
 )
+from .errors.run_time_error import RunTimeError
+from .base.nodes.variable_access_node import VariableAccessNode
+from .base.nodes.variable_assign_node import VariableAssignNode
 
 
 class Interpreter:
@@ -80,3 +83,32 @@ class Interpreter:
         return response.success(
             result.set_position(node.position_start, node.position_end)
         )
+
+    def visit_VariableAccessNode(
+        self, node: "VariableAccessNode", context: "Context"
+    ) -> float:
+        response = RunTimeResult()
+        variable_name = node.variable_name_token.value
+        value = context.symbol_table.get(variable_name)
+        if not value:
+            return response.failure(
+                RunTimeError(
+                    node.position_start,
+                    node.position_end,
+                    f"'{variable_name}' is not defined",
+                    context,
+                )
+            )
+        value = value.copy().set_position(node.position_start, node.position_end)
+        return response.success(value)
+
+    def visit_VariableAssignNode(
+        self, node: "VariableAssignNode", context: "Context"
+    ) -> float:
+        response = RunTimeResult()
+        variable_name = node.variable_name_token.value
+        value = response.register(self.visit(node.value_node, context))
+        if response.error:
+            return response
+        context.symbol_table.set(variable_name, value)
+        return response.success(value)

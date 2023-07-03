@@ -25,6 +25,13 @@ class Number:
         self.context = context
         return self
 
+    def copy(self) -> "Number":
+        return (
+            Number(self.value)
+            .set_context(self.context)
+            .set_position(self.position_start, self.position_end)
+        )
+
     def added_to(self, other: "Number") -> tuple["Number", BaseError]:
         if isinstance(other, Number):
             return Number(self.value + other.value).set_context(self.context), None
@@ -58,7 +65,7 @@ class Number:
                     self.context,
                 )
             return Number(self.value % other.value).set_context(self.context), None
-    
+
     def powered_by(self, other: "Number") -> tuple["Number", BaseError]:
         if isinstance(other, Number):
-            return Number(self.value ** other.value).set_context(self.context), None
+            return Number(self.value**other.value).set_context(self.context), None

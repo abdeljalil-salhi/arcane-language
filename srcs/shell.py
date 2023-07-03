@@ -4,6 +4,11 @@ from .interpreter import Interpreter
 from .base.context import Context
 from .base.token import Token
 from .errors.base_error import BaseError
+from .base.symbol_table import SymbolTable
+from .base.number import Number
+
+global_symbol_table = SymbolTable()
+global_symbol_table.set("NULL", Number(0))
 
 
 def run(file_name: str, text: str) -> tuple[list["Token"], BaseError]:
@@ -19,6 +24,7 @@ def run(file_name: str, text: str) -> tuple[list["Token"], BaseError]:
 
     interpreter = Interpreter()
     context = Context("<program>")
+    context.symbol_table = global_symbol_table
     result = interpreter.visit(ast.node, context)
 
     return result.value, result.error

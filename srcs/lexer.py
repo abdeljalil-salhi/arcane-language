@@ -3,15 +3,22 @@ from .base.token import (
     Token,
     TOKEN_PLUS,
     TOKEN_MINUS,
+    TOKEN_IDENTIFIER,
+    TOKEN_KEYWORD,
     TOKEN_MUL,
     TOKEN_DIV,
     TOKEN_MOD,
     TOKEN_POW,
+    TOKEN_EQ,
     TOKEN_LPAREN,
     TOKEN_RPAREN,
     TOKEN_EOF,
     TOKEN_INT,
     TOKEN_FLOAT,
+    NUMERIC,
+    ALPHABETIC,
+    ALPHANUMERIC,
+    KEYWORDS,
 )
 from .errors.base_error import BaseError
 from .errors.illegal_character_error import IllegalCharacterError
@@ -40,8 +47,10 @@ class Lexer:
         while self.current_character:
             if self.current_character in " \t":
                 self.advance()
-            elif self.current_character in "0123456789":
+            elif self.current_character in NUMERIC:
                 tokens.append(self.make_number())
+            elif self.current_character in ALPHABETIC:
+                tokens.append(self.make_identifier())
             elif self.current_character == "+":
                 tokens.append(Token(TOKEN_PLUS, position_start=self.position))
                 self.advance()
@@ -59,6 +68,9 @@ class Lexer:
                 self.advance()
             elif self.current_character == "^":
                 tokens.append(Token(TOKEN_POW, position_start=self.position))
+                self.advance()
+            elif self.current_character == "=":
+                tokens.append(Token(TOKEN_EQ, position_start=self.position))
                 self.advance()
             elif self.current_character == "(":
                 tokens.append(Token(TOKEN_LPAREN, position_start=self.position))
@@ -82,7 +94,7 @@ class Lexer:
         dot_count = 0
         position_start = self.position.copy()
 
-        while self.current_character and self.current_character in "0123456789.":
+        while self.current_character and self.current_character in NUMERIC + ".":
             if self.current_character == ".":
                 if dot_count == 1:
                     break
@@ -95,3 +107,15 @@ class Lexer:
         if dot_count == 0:
             return Token(TOKEN_INT, int(number_string), position_start, self.position)
         return Token(TOKEN_FLOAT, float(number_string), position_start, self.position)
+
+    def make_identifier(self) -> "Token":
+        identifier_string = ""
+        position_start = self.position.copy()
+
+        while self.current_character and self.current_character in ALPHANUMERIC:
+            identifier_string += self.current_character
+            self.advance()
+
+        token_type = TOKEN_KEYWORD if identifier_string in KEYWORDS else TOKEN_IDENTIFIER
+        
+        return Token(token_type, identifier_string, position_start, self.position)

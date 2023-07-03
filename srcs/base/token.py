@@ -1,19 +1,5 @@
 from .position import Position
-
-TOKEN_INT = "INT"
-TOKEN_FLOAT = "FLOAT"
-
-TOKEN_PLUS = "PLUS"
-TOKEN_MINUS = "MINUS"
-TOKEN_MUL = "MUL"
-TOKEN_DIV = "DIV"
-TOKEN_MOD = "MOD"
-TOKEN_POW = "POW"
-
-TOKEN_LPAREN = "LPAREN"
-TOKEN_RPAREN = "RPAREN"
-
-TOKEN_EOF = "EOF"
+from .constants.tokens import *
 
 
 class Token:
@@ -38,3 +24,6 @@ class Token:
         if self.value:
             return f"{self.type}:{self.value}"
         return f"{self.type}"
+
+    def matches(self, _type: str, value: str) -> bool:
+        return self.type == _type and self.value == value
