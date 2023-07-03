@@ -5,6 +5,8 @@ from .base.token import (
     TOKEN_MINUS,
     TOKEN_MUL,
     TOKEN_DIV,
+    TOKEN_MOD,
+    TOKEN_POW,
     TOKEN_LPAREN,
     TOKEN_RPAREN,
     TOKEN_EOF,
@@ -51,6 +53,12 @@ class Lexer:
                 self.advance()
             elif self.current_character == "/":
                 tokens.append(Token(TOKEN_DIV, position_start=self.position))
+                self.advance()
+            elif self.current_character == "%":
+                tokens.append(Token(TOKEN_MOD, position_start=self.position))
+                self.advance()
+            elif self.current_character == "^":
+                tokens.append(Token(TOKEN_POW, position_start=self.position))
                 self.advance()
             elif self.current_character == "(":
                 tokens.append(Token(TOKEN_LPAREN, position_start=self.position))

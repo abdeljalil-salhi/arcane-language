@@ -5,6 +5,8 @@ from .base.token import (
     TOKEN_MINUS,
     TOKEN_MUL,
     TOKEN_DIV,
+    TOKEN_MOD,
+    TOKEN_POW,
     TOKEN_INT,
     TOKEN_FLOAT,
     TOKEN_LPAREN,
@@ -42,18 +44,11 @@ class Parser:
             )
         return response
 
-    def factor(self) -> "NumberNode":
+    def atom(self) -> "NumberNode":
         response = ParseResult()
         token = self.current_token
 
-        if token.type in (TOKEN_PLUS, TOKEN_MINUS):
-            response.register(self.advance())
-            factor = response.register(self.factor())
-            if response.error:
-                return response
-            return response.success(UnaryOperationNode(token, factor))
-
-        elif token.type in (TOKEN_INT, TOKEN_FLOAT):
+        if token.type in (TOKEN_INT, TOKEN_FLOAT):
             response.register(self.advance())
             return response.success(NumberNode(token))
 
@@ -75,27 +70,48 @@ class Parser:
 
         return response.failure(
             InvalidSyntaxError(
-                token.position_start, token.position_end, "Expected int or float"
+                token.position_start,
+                token.position_end,
+                "Expected int, float, '+', '-' or '('",
             )
         )
 
+    def power(self) -> "BinaryOperationNode":
+        return self.binary_operation(self.atom, (TOKEN_POW,), self.factor)
+
+    def factor(self) -> "NumberNode":
+        response = ParseResult()
+        token = self.current_token
+
+        if token.type in (TOKEN_PLUS, TOKEN_MINUS):
+            response.register(self.advance())
+            factor = response.register(self.factor())
+            if response.error:
+                return response
+            return response.success(UnaryOperationNode(token, factor))
+
+        return self.power()
+
     def term(self) -> "BinaryOperationNode":
-        return self.binary_operation(self.factor, (TOKEN_MUL, TOKEN_DIV))
+        return self.binary_operation(self.factor, (TOKEN_MUL, TOKEN_DIV, TOKEN_MOD))
 
     def expr(self) -> "BinaryOperationNode":
         return self.binary_operation(self.term, (TOKEN_PLUS, TOKEN_MINUS))
 
     def binary_operation(
-        self, function, operation_tokens: list["Token"]
+        self, function_first, operation_tokens: list["Token"], function_second=None
     ) -> "BinaryOperationNode":
+        if function_second is None:
+            function_second = function_first
+        
         response = ParseResult()
-        left_node = response.register(function())
+        left_node = response.register(function_first())
         if response.error:
             return response
         while self.current_token.type in operation_tokens:
             operator_token = self.current_token
             response.register(self.advance())
-            right_node = response.register(function())
+            right_node = response.register(function_second())
             if response.error:
                 return response
             left_node = BinaryOperationNode(left_node, operator_token, right_node)

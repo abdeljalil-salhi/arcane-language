@@ -4,7 +4,14 @@ from .base.run_time_result import RunTimeResult
 from .base.number import Number
 from .base.nodes.unary_operation_node import UnaryOperationNode
 from .base.nodes.binary_operation_node import BinaryOperationNode
-from .base.token import TOKEN_MINUS, TOKEN_PLUS, TOKEN_MUL, TOKEN_DIV
+from .base.token import (
+    TOKEN_MINUS,
+    TOKEN_PLUS,
+    TOKEN_MUL,
+    TOKEN_DIV,
+    TOKEN_MOD,
+    TOKEN_POW,
+)
 
 
 class Interpreter:
@@ -48,10 +55,10 @@ class Interpreter:
         self, node: "BinaryOperationNode", context: "Context"
     ) -> float:
         response = RunTimeResult()
-        left_node = response.register(self.visit(node.left_node, context))
+        left_node: "Number" = response.register(self.visit(node.left_node, context))
         if response.error:
             return response
-        right_node = response.register(self.visit(node.right_node, context))
+        right_node: "Number" = response.register(self.visit(node.right_node, context))
         if response.error:
             return response
 
@@ -63,6 +70,10 @@ class Interpreter:
             result, error = left_node.multiplied_by(right_node)
         elif node.operator_token.type == TOKEN_DIV:
             result, error = left_node.divided_by(right_node)
+        elif node.operator_token.type == TOKEN_MOD:
+            result, error = left_node.moduled_by(right_node)
+        elif node.operator_token.type == TOKEN_POW:
+            result, error = left_node.powered_by(right_node)
 
         if error:
             return response.failure(error)

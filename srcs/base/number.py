@@ -47,3 +47,18 @@ class Number:
                     self.context,
                 )
             return Number(self.value / other.value).set_context(self.context), None
+
+    def moduled_by(self, other: "Number") -> tuple["Number", BaseError]:
+        if isinstance(other, Number):
+            if other.value == 0:
+                return None, RunTimeError(
+                    other.position_start,
+                    other.position_end,
+                    "Division by zero",
+                    self.context,
+                )
+            return Number(self.value % other.value).set_context(self.context), None
+    
+    def powered_by(self, other: "Number") -> tuple["Number", BaseError]:
+        if isinstance(other, Number):
+            return Number(self.value ** other.value).set_context(self.context), None
