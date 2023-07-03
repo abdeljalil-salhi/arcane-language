@@ -1,5 +1,4 @@
 from .position import Position
-from .constants.tokens import *
 
 
 class Token:

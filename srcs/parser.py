@@ -1,20 +1,5 @@
-from .base.token import (
-    Token,
-    TOKEN_EOF,
-    TOKEN_PLUS,
-    TOKEN_MINUS,
-    TOKEN_MUL,
-    TOKEN_DIV,
-    TOKEN_MOD,
-    TOKEN_POW,
-    TOKEN_INT,
-    TOKEN_FLOAT,
-    TOKEN_LPAREN,
-    TOKEN_RPAREN,
-    TOKEN_EQ,
-    TOKEN_KEYWORD,
-    TOKEN_IDENTIFIER,
-)
+from .base.token import Token
+from .base.constants.tokens import *
 from .base.nodes.binary_operation_node import BinaryOperationNode
 from .errors.invalid_syntax_error import InvalidSyntaxError
 from .base.parse_result import ParseResult
@@ -44,7 +29,7 @@ class Parser:
                 InvalidSyntaxError(
                     self.current_token.position_start,
                     self.current_token.position_end,
-                    "Expected '+', '-', '*', or '/'",
+                    "Expected '+', '-', '*', or '/', '^', '%', '==', '!=', '<', '<=', '>', '>=', 'and' or 'or'",
                 )
             )
         return response
@@ -104,6 +89,43 @@ class Parser:
     def term(self) -> "BinaryOperationNode":
         return self.binary_operation(self.factor, (TOKEN_MUL, TOKEN_DIV, TOKEN_MOD))
 
+    def comp_expr(self) -> "BinaryOperationNode":
+        response = ParseResult()
+
+        if self.current_token.matches(TOKEN_KEYWORD, "not"):
+            operator_token = self.current_token
+            response.register_advance(self.advance)
+            node = response.register(self.comp_expr())
+            if response.error:
+                return response
+            return response.success(UnaryOperationNode(operator_token, node))
+
+        node = response.register(
+            self.binary_operation(
+                self.arith_expr,
+                (
+                    TOKEN_EEQ,
+                    TOKEN_NEQ,
+                    TOKEN_LT,
+                    TOKEN_LTE,
+                    TOKEN_GT,
+                    TOKEN_GTE,
+                ),
+            )
+        )
+        if response.error:
+            return response.failure(
+                InvalidSyntaxError(
+                    self.current_token.position_start,
+                    self.current_token.position_end,
+                    "Expected int, float, identifier, '+', '-', '(' or 'not'",
+                )
+            )
+        return response.success(node)
+
+    def arith_expr(self) -> "BinaryOperationNode":
+        return self.binary_operation(self.term, (TOKEN_PLUS, TOKEN_MINUS))
+
     def expr(self) -> "BinaryOperationNode":
         response = ParseResult()
 
@@ -134,20 +156,22 @@ class Parser:
             return response.success(VariableAssignNode(identifier, expr))
 
         node = response.register(
-            self.binary_operation(self.term, (TOKEN_PLUS, TOKEN_MINUS))
+            self.binary_operation(
+                self.comp_expr, ((TOKEN_KEYWORD, "and"), (TOKEN_KEYWORD, "or"))
+            )
         )
         if response.error:
             return response.failure(
                 InvalidSyntaxError(
                     self.current_token.position_start,
                     self.current_token.position_end,
-                    "Expected 'auto', int, float, identifier, '+', '-' or '('",
+                    "Expected 'auto', int, float, identifier, '+', '-', '(' or 'not'",
                 )
             )
         return response.success(node)
 
     def binary_operation(
-        self, function_first, operation_tokens: list["Token"], function_second=None
+        self, function_first, operation_tokens: any, function_second=None
     ) -> "BinaryOperationNode":
         if function_second is None:
             function_second = function_first
@@ -156,7 +180,14 @@ class Parser:
         left_node = response.register(function_first())
         if response.error:
             return response
-        while self.current_token.type in operation_tokens:
+        while (
+            self.current_token.type in operation_tokens
+            or (
+                self.current_token.type,
+                self.current_token.value,
+            )
+            in operation_tokens
+        ):
             operator_token = self.current_token
             response.register_advance(self.advance)
             right_node = response.register(function_second())

@@ -8,7 +8,9 @@ from .base.symbol_table import SymbolTable
 from .base.number import Number
 
 global_symbol_table = SymbolTable()
-global_symbol_table.set("NULL", Number(0))
+global_symbol_table.set("null", Number(0))
+global_symbol_table.set("false", Number(0))
+global_symbol_table.set("true", Number(1))
 
 
 def run(file_name: str, text: str) -> tuple[list["Token"], BaseError]:

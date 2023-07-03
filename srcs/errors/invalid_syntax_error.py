@@ -1,4 +1,5 @@
 from .base_error import BaseError
+from ..base.position import Position
 
 
 class InvalidSyntaxError(BaseError):

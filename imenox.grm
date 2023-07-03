@@ -1,5 +1,10 @@
 expr        :   KEYWORD:auto IDENTIFIER EQ expr
-            :   term ( ( PLUS | MINUS ) term )*
+            :   comp-expr ( ( KEYWORD:and | KEYWORD:or ) comp-expr )*
+
+comp-expr   :   KEYWORD:not comp-expr
+            :   arith-expr ( ( EEQ | NEQ | LT | LTE | GT | GTE ) arith-expr )*
+
+arith-expr  :   term ( ( PLUS | MINUS ) term )*
 
 term        :   factor ( ( MUL | DIV | MOD ) factor )*
 

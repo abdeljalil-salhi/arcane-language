@@ -4,14 +4,7 @@ from .base.run_time_result import RunTimeResult
 from .base.number import Number
 from .base.nodes.unary_operation_node import UnaryOperationNode
 from .base.nodes.binary_operation_node import BinaryOperationNode
-from .base.token import (
-    TOKEN_MINUS,
-    TOKEN_PLUS,
-    TOKEN_MUL,
-    TOKEN_DIV,
-    TOKEN_MOD,
-    TOKEN_POW,
-)
+from .base.constants.tokens import *
 from .errors.run_time_error import RunTimeError
 from .base.nodes.variable_access_node import VariableAccessNode
 from .base.nodes.variable_assign_node import VariableAssignNode
@@ -47,6 +40,8 @@ class Interpreter:
         error = None
         if node.operator_token.type == TOKEN_MINUS:
             number, error = number.multiplied_by(Number(-1))
+        elif node.operator_token.matches(TOKEN_KEYWORD, "not"):
+            number, error = number.notted()
 
         if error:
             return response.failure(error)
@@ -77,6 +72,22 @@ class Interpreter:
             result, error = left_node.moduled_by(right_node)
         elif node.operator_token.type == TOKEN_POW:
             result, error = left_node.powered_by(right_node)
+        elif node.operator_token.type == TOKEN_EEQ:
+            result, error = left_node.get_comparison_eq(right_node)
+        elif node.operator_token.type == TOKEN_NEQ:
+            result, error = left_node.get_comparison_neq(right_node)
+        elif node.operator_token.type == TOKEN_LT:
+            result, error = left_node.get_comparison_lt(right_node)
+        elif node.operator_token.type == TOKEN_LTE:
+            result, error = left_node.get_comparison_lte(right_node)
+        elif node.operator_token.type == TOKEN_GT:
+            result, error = left_node.get_comparison_gt(right_node)
+        elif node.operator_token.type == TOKEN_GTE:
+            result, error = left_node.get_comparison_gte(right_node)
+        elif node.operator_token.matches(TOKEN_KEYWORD, "and"):
+            result, error = left_node.anded_by(right_node)
+        elif node.operator_token.matches(TOKEN_KEYWORD, "or"):
+            result, error = left_node.ored_by(right_node)
 
         if error:
             return response.failure(error)

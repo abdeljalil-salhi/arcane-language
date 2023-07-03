@@ -1,27 +1,9 @@
 from .base.position import Position
-from .base.token import (
-    Token,
-    TOKEN_PLUS,
-    TOKEN_MINUS,
-    TOKEN_IDENTIFIER,
-    TOKEN_KEYWORD,
-    TOKEN_MUL,
-    TOKEN_DIV,
-    TOKEN_MOD,
-    TOKEN_POW,
-    TOKEN_EQ,
-    TOKEN_LPAREN,
-    TOKEN_RPAREN,
-    TOKEN_EOF,
-    TOKEN_INT,
-    TOKEN_FLOAT,
-    NUMERIC,
-    ALPHABETIC,
-    ALPHANUMERIC,
-    KEYWORDS,
-)
+from .base.token import Token
+from .base.constants.tokens import *
 from .errors.base_error import BaseError
 from .errors.illegal_character_error import IllegalCharacterError
+from .errors.expected_character_error import ExpectedCharacterError
 
 
 class Lexer:
@@ -78,6 +60,17 @@ class Lexer:
             elif self.current_character == ")":
                 tokens.append(Token(TOKEN_RPAREN, position_start=self.position))
                 self.advance()
+            elif self.current_character == "!":
+                token, error = self.make_not_equals()
+                if error:
+                    return [], error
+                tokens.append(token)
+            elif self.current_character == "=":
+                tokens.append(self.make_equals())
+            elif self.current_character == "<":
+                tokens.append(self.make_less_than())
+            elif self.current_character == ">":
+                tokens.append(self.make_greater_than())
             else:
                 position_start = self.position.copy()
                 char = self.current_character
@@ -116,6 +109,65 @@ class Lexer:
             identifier_string += self.current_character
             self.advance()
 
-        token_type = TOKEN_KEYWORD if identifier_string in KEYWORDS else TOKEN_IDENTIFIER
-        
+        token_type = (
+            TOKEN_KEYWORD if identifier_string in KEYWORDS else TOKEN_IDENTIFIER
+        )
+
         return Token(token_type, identifier_string, position_start, self.position)
+
+    def make_not_equals(self) -> tuple["Token", BaseError]:
+        position_start = self.position.copy()
+        self.advance()
+
+        if self.current_character == "=":
+            self.advance()
+            return (
+                Token(
+                    TOKEN_NEQ, position_start=position_start, position_end=self.position
+                ),
+                None,
+            )
+
+        self.advance()
+        return None, ExpectedCharacterError(
+            position_start, self.position, "'=' (after '!')"
+        )
+
+    def make_equals(self) -> "Token":
+        token_type = TOKEN_EQ
+        position_start = self.position.copy()
+        self.advance()
+
+        if self.current_character == "=":
+            self.advance()
+            token_type = TOKEN_EEQ
+
+        return Token(
+            token_type, position_start=position_start, position_end=self.position
+        )
+
+    def make_greater_than(self) -> "Token":
+        token_type = TOKEN_GT
+        position_start = self.position.copy()
+        self.advance()
+
+        if self.current_character == "=":
+            self.advance()
+            token_type = TOKEN_GTE
+
+        return Token(
+            token_type, position_start=position_start, position_end=self.position
+        )
+
+    def make_less_than(self) -> "Token":
+        token_type = TOKEN_LT
+        position_start = self.position.copy()
+        self.advance()
+
+        if self.current_character == "=":
+            self.advance()
+            token_type = TOKEN_LTE
+
+        return Token(
+            token_type, position_start=position_start, position_end=self.position
+        )

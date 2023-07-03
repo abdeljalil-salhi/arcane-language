@@ -69,3 +69,62 @@ class Number:
     def powered_by(self, other: "Number") -> tuple["Number", BaseError]:
         if isinstance(other, Number):
             return Number(self.value**other.value).set_context(self.context), None
+
+    def get_comparison_eq(self, other: "Number") -> tuple["Number", BaseError]:
+        if isinstance(other, Number):
+            return (
+                Number(int(self.value == other.value)).set_context(self.context),
+                None,
+            )
+
+    def get_comparison_neq(self, other: "Number") -> tuple["Number", BaseError]:
+        if isinstance(other, Number):
+            return (
+                Number(int(self.value != other.value)).set_context(self.context),
+                None,
+            )
+
+    def get_comparison_lt(self, other: "Number") -> tuple["Number", BaseError]:
+        if isinstance(other, Number):
+            return (
+                Number(int(self.value < other.value)).set_context(self.context),
+                None,
+            )
+
+    def get_comparison_lte(self, other: "Number") -> tuple["Number", BaseError]:
+        if isinstance(other, Number):
+            return (
+                Number(int(self.value <= other.value)).set_context(self.context),
+                None,
+            )
+
+    def get_comparison_gt(self, other: "Number") -> tuple["Number", BaseError]:
+        if isinstance(other, Number):
+            return (
+                Number(int(self.value > other.value)).set_context(self.context),
+                None,
+            )
+
+    def get_comparison_gte(self, other: "Number") -> tuple["Number", BaseError]:
+        if isinstance(other, Number):
+            return (
+                Number(int(self.value >= other.value)).set_context(self.context),
+                None,
+            )
+
+    def anded_by(self, other: "Number") -> tuple["Number", BaseError]:
+        if isinstance(other, Number):
+            return (
+                Number(int(self.value and other.value)).set_context(self.context),
+                None,
+            )
+
+    def ored_by(self, other: "Number") -> tuple["Number", BaseError]:
+        if isinstance(other, Number):
+            return (
+                Number(int(self.value or other.value)).set_context(self.context),
+                None,
+            )
+
+    def notted(self) -> tuple["Number", BaseError]:
+        return Number(int(not self.value)).set_context(self.context), None

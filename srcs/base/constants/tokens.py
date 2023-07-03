@@ -11,6 +11,12 @@ TOKEN_DIV           = "DIV"
 TOKEN_MOD           = "MOD"
 TOKEN_POW           = "POW"
 TOKEN_EQ            = "EQ"
+TOKEN_EEQ           = "EEQ"
+TOKEN_NEQ           = "NEQ"
+TOKEN_LT            = "LT"
+TOKEN_LTE           = "LTE"
+TOKEN_GT            = "GT"
+TOKEN_GTE           = "GTE"
 
 TOKEN_LPAREN        = "LPAREN"
 TOKEN_RPAREN        = "RPAREN"
@@ -23,4 +29,7 @@ ALPHANUMERIC        = ALPHABETIC + NUMERIC + "_"
 
 KEYWORDS            = [
     "auto",
+    "and",
+    "or",
+    "not",
 ]
