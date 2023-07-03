@@ -51,9 +51,6 @@ class Lexer:
             elif self.current_character == "^":
                 tokens.append(Token(TOKEN_POW, position_start=self.position))
                 self.advance()
-            elif self.current_character == "=":
-                tokens.append(Token(TOKEN_EQ, position_start=self.position))
-                self.advance()
             elif self.current_character == "(":
                 tokens.append(Token(TOKEN_LPAREN, position_start=self.position))
                 self.advance()
