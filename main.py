@@ -3,10 +3,10 @@ from srcs.shell import run
 if __name__ == "__main__":
     try:
         while True:
-            line = input("imenox > ")
-            if line.strip() == "":
+            line = input("imenox > ").strip()
+            if line == "":
                 continue
-            elif line.strip() == "exit":
+            elif line == "exit":
                 print("Bye!")
                 exit(0)
             result, error = run("<stdin>", line)

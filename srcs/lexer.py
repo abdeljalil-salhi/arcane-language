@@ -68,6 +68,9 @@ class Lexer:
                 tokens.append(self.make_less_than())
             elif self.current_character == ">":
                 tokens.append(self.make_greater_than())
+            elif self.current_character == ",":
+                tokens.append(Token(TOKEN_COMMA, position_start=self.position))
+                self.advance()
             else:
                 position_start = self.position.copy()
                 char = self.current_character
@@ -138,6 +141,9 @@ class Lexer:
         if self.current_character == "=":
             self.advance()
             token_type = TOKEN_EEQ
+        elif self.current_character == ">":
+            self.advance()
+            token_type = TOKEN_ARROW
 
         return Token(
             token_type, position_start=position_start, position_end=self.position

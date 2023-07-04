@@ -10,6 +10,8 @@ from .base.nodes.variable_assign_node import VariableAssignNode
 from .base.nodes.if_node import IfNode
 from .base.nodes.for_node import ForNode
 from .base.nodes.while_node import WhileNode
+from .base.nodes.function_definition_node import FunctionDefinitionNode
+from .base.nodes.function_call_node import FunctionCallNode
 
 
 class Parser:
@@ -32,10 +34,51 @@ class Parser:
                 InvalidSyntaxError(
                     self.current_token.position_start,
                     self.current_token.position_end,
-                    "Expected '+', '-', '*', or '/', '^', '%', '==', '!=', '<', '<=', '>', '>=', 'and' or 'or'",
+                    f"Expected '+', '-', '*', or '/', '^', '%', '==', '!=', '<', '<=', '>', '>=', '{KEYWORD_AND}' or '{KEYWORD_OR}'",
                 )
             )
         return response
+
+    def call(self) -> "NumberNode":
+        response = ParseResult()
+        atom: "NumberNode" = response.register(self.atom())
+        if response.error:
+            return response
+
+        if self.current_token.type == TOKEN_LPAREN:
+            response.register_advance(self.advance)
+            argument_nodes: list["BinaryOperationNode"] = []
+
+            if self.current_token.type == TOKEN_RPAREN:
+                response.register_advance(self.advance)
+            else:
+                argument_nodes.append(response.register(self.expr()))
+                if response.error:
+                    return response.failure(
+                        InvalidSyntaxError(
+                            self.current_token.position_start,
+                            self.current_token.position_end,
+                            f"Expected ')', '{KEYWORD_VARIABLE}', int, float, identifier, '+', '-', '(' or 'not'",
+                        )
+                    )
+
+                while self.current_token.type == TOKEN_COMMA:
+                    response.register_advance(self.advance)
+                    argument_nodes.append(response.register(self.expr()))
+                    if response.error:
+                        return response
+
+                if self.current_token.type != TOKEN_RPAREN:
+                    return response.failure(
+                        InvalidSyntaxError(
+                            self.current_token.position_start,
+                            self.current_token.position_end,
+                            f"Expected ',' or ')'",
+                        )
+                    )
+                response.register_advance(self.advance)
+            return response.success(FunctionCallNode(atom, argument_nodes))
+        return response.success(atom)
 
     def atom(self) -> "NumberNode":
         response = ParseResult()
@@ -83,16 +126,22 @@ class Parser:
                 return response
             return response.success(while_expr)
 
+        elif token.matches(TOKEN_KEYWORD, KEYWORD_FUNCTION):
+            func_def = response.register(self.func_def())
+            if response.error:
+                return response
+            return response.success(func_def)
+
         return response.failure(
             InvalidSyntaxError(
                 token.position_start,
                 token.position_end,
-                "Expected int, float, identifier, '+', '-' or '('",
+                f"Expected int, float, identifier, '+', '-', '(', 'if', 'for', 'while', or '{KEYWORD_FUNCTION}'",
             )
         )
 
     def power(self) -> "BinaryOperationNode":
-        return self.binary_operation(self.atom, (TOKEN_POW,), self.factor)
+        return self.binary_operation(self.call, (TOKEN_POW,), self.factor)
 
     def factor(self) -> "NumberNode":
         response = ParseResult()
@@ -165,12 +214,12 @@ class Parser:
         if response.error:
             return response
 
-        if not self.current_token.matches(TOKEN_KEYWORD, "then"):
+        if not self.current_token.matches(TOKEN_KEYWORD, KEYWORD_THEN):
             return response.failure(
                 InvalidSyntaxError(
                     self.current_token.position_start,
                     self.current_token.position_end,
-                    "Expected 'then'",
+                    f"Expected '{KEYWORD_THEN}'",
                 )
             )
         response.register_advance(self.advance)
@@ -185,12 +234,12 @@ class Parser:
             if response.error:
                 return response
 
-            if not self.current_token.matches(TOKEN_KEYWORD, "then"):
+            if not self.current_token.matches(TOKEN_KEYWORD, KEYWORD_THEN):
                 return response.failure(
                     InvalidSyntaxError(
                         self.current_token.position_start,
                         self.current_token.position_end,
-                        "Expected 'then'",
+                        f"Expected '{KEYWORD_THEN}'",
                     )
                 )
             response.register_advance(self.advance)
@@ -273,12 +322,12 @@ class Parser:
         else:
             increment_value = None
 
-        if not self.current_token.matches(TOKEN_KEYWORD, "then"):
+        if not self.current_token.matches(TOKEN_KEYWORD, KEYWORD_THEN):
             return response.failure(
                 InvalidSyntaxError(
                     self.current_token.position_start,
                     self.current_token.position_end,
-                    "Expected 'then'",
+                    f"Expected '{KEYWORD_THEN}'",
                 )
             )
         response.register_advance(self.advance)
@@ -308,12 +357,12 @@ class Parser:
         if response.error:
             return response
 
-        if not self.current_token.matches(TOKEN_KEYWORD, "then"):
+        if not self.current_token.matches(TOKEN_KEYWORD, KEYWORD_THEN):
             return response.failure(
                 InvalidSyntaxError(
                     self.current_token.position_start,
                     self.current_token.position_end,
-                    "Expected 'then'",
+                    f"Expected '{KEYWORD_THEN}'",
                 )
             )
         response.register_advance(self.advance)
@@ -327,7 +376,7 @@ class Parser:
     def expr(self) -> "BinaryOperationNode":
         response = ParseResult()
 
-        if self.current_token.matches(TOKEN_KEYWORD, "auto"):
+        if self.current_token.matches(TOKEN_KEYWORD, KEYWORD_VARIABLE):
             response.register_advance(self.advance)
             if self.current_token.type != TOKEN_IDENTIFIER:
                 return response.failure(
@@ -355,7 +404,8 @@ class Parser:
 
         node = response.register(
             self.binary_operation(
-                self.comp_expr, ((TOKEN_KEYWORD, "and"), (TOKEN_KEYWORD, "or"))
+                self.comp_expr,
+                ((TOKEN_KEYWORD, KEYWORD_AND), (TOKEN_KEYWORD, KEYWORD_OR)),
             )
         )
         if response.error:
@@ -363,7 +413,7 @@ class Parser:
                 InvalidSyntaxError(
                     self.current_token.position_start,
                     self.current_token.position_end,
-                    "Expected 'auto', int, float, identifier, '+', '-', '(' or 'not'",
+                    f"Expected '{KEYWORD_VARIABLE}', 'if', 'for', 'while', '{KEYWORD_FUNCTION}', int, float, identifier, '+', '-', '(' or 'not'",
                 )
             )
         return response.success(node)
@@ -393,3 +443,94 @@ class Parser:
                 return response
             left_node = BinaryOperationNode(left_node, operator_token, right_node)
         return response.success(left_node)
+
+    def func_def(self):
+        response = ParseResult()
+
+        if not self.current_token.matches(TOKEN_KEYWORD, KEYWORD_FUNCTION):
+            return response.failure(
+                InvalidSyntaxError(
+                    self.current_token.position_start,
+                    self.current_token.position_end,
+                    f"Expected '{KEYWORD_FUNCTION}'",
+                )
+            )
+        response.register_advance(self.advance)
+
+        if self.current_token.type == TOKEN_IDENTIFIER:
+            identifier_token = self.current_token
+            response.register_advance(self.advance)
+            if self.current_token.type != TOKEN_LPAREN:
+                return response.failure(
+                    InvalidSyntaxError(
+                        self.current_token.position_start,
+                        self.current_token.position_end,
+                        "Expected '('",
+                    )
+                )
+        else:
+            identifier_token = None
+            if self.current_token.type != TOKEN_LPAREN:
+                return response.failure(
+                    InvalidSyntaxError(
+                        self.current_token.position_start,
+                        self.current_token.position_end,
+                        "Expected identifier or '('",
+                    )
+                )
+        response.register_advance(self.advance)
+
+        argument_name_tokens = []
+        if self.current_token.type == TOKEN_IDENTIFIER:
+            argument_name_tokens.append(self.current_token)
+            response.register_advance(self.advance)
+            while self.current_token.type == TOKEN_COMMA:
+                response.register_advance(self.advance)
+                if self.current_token.type != TOKEN_IDENTIFIER:
+                    return response.failure(
+                        InvalidSyntaxError(
+                            self.current_token.position_start,
+                            self.current_token.position_end,
+                            "Expected identifier",
+                        )
+                    )
+                argument_name_tokens.append(self.current_token)
+                response.register_advance(self.advance)
+            if self.current_token.type != TOKEN_RPAREN:
+                return response.failure(
+                    InvalidSyntaxError(
+                        self.current_token.position_start,
+                        self.current_token.position_end,
+                        "Expected ',' or ')'",
+                    )
+                )
+        else:
+            if self.current_token.type != TOKEN_RPAREN:
+                return response.failure(
+                    InvalidSyntaxError(
+                        self.current_token.position_start,
+                        self.current_token.position_end,
+                        "Expected identifier or ')'",
+                    )
+                )
+        response.register_advance(self.advance)
+
+        if self.current_token.type != TOKEN_ARROW:
+            return response.failure(
+                InvalidSyntaxError(
+                    self.current_token.position_start,
+                    self.current_token.position_end,
+                    "Expected '=>'",
+                )
+            )
+        response.register_advance(self.advance)
+
+        node_to_return: "BinaryOperationNode" = response.register(self.expr())
+        if response.error:
+            return response
+
+        return response.success(
+            FunctionDefinitionNode(
+                identifier_token, argument_name_tokens, node_to_return
+            )
+        )

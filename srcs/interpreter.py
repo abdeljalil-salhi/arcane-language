@@ -11,6 +11,9 @@ from .base.nodes.variable_assign_node import VariableAssignNode
 from .base.nodes.if_node import IfNode
 from .base.nodes.for_node import ForNode
 from .base.nodes.while_node import WhileNode
+from .base.nodes.function_definition_node import FunctionDefinitionNode
+from .base.nodes.function_call_node import FunctionCallNode
+from .base.function import Function
 
 
 class Interpreter:
@@ -87,9 +90,9 @@ class Interpreter:
             result, error = left_node.get_comparison_gt(right_node)
         elif node.operator_token.type == TOKEN_GTE:
             result, error = left_node.get_comparison_gte(right_node)
-        elif node.operator_token.matches(TOKEN_KEYWORD, "and"):
+        elif node.operator_token.matches(TOKEN_KEYWORD, KEYWORD_AND):
             result, error = left_node.anded_by(right_node)
-        elif node.operator_token.matches(TOKEN_KEYWORD, "or"):
+        elif node.operator_token.matches(TOKEN_KEYWORD, KEYWORD_OR):
             result, error = left_node.ored_by(right_node)
 
         if error:
@@ -201,3 +204,41 @@ class Interpreter:
                 return response
 
         return response.success(None)
+
+    def visit_FunctionDefinitionNode(
+        self, node: "FunctionDefinitionNode", context: "Context"
+    ) -> "RunTimeResult":
+        response = RunTimeResult()
+        function_name = node.token.value if node.token else None
+        function_body = node.body
+        function_arguments = [argument.value for argument in node.arguments]
+        function_value = (
+            Function(function_name, function_body, function_arguments)
+            .set_context(context)
+            .set_position(node.position_start, node.position_end)
+        )
+        if node.token:
+            context.symbol_table.set(function_name, function_value)
+        return response.success(function_value)
+
+    def visit_FunctionCallNode(
+        self, node: "FunctionCallNode", context: "Context"
+    ) -> "RunTimeResult":
+        response = RunTimeResult()
+        arguments = []
+        value_to_call: "Function" = response.register(
+            self.visit(node.node_to_call, context)
+        )
+        if response.error:
+            return response
+        value_to_call = value_to_call.copy().set_position(
+            node.position_start, node.position_end
+        )
+        for argument_node in node.arguments:
+            arguments.append(response.register(self.visit(argument_node, context)))
+            if response.error:
+                return response
+        return_value = response.register(value_to_call.execute(arguments))
+        if response.error:
+            return response
+        return response.success(return_value)

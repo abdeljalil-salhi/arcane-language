@@ -21,19 +21,28 @@ TOKEN_GTE           = "GTE"
 TOKEN_LPAREN        = "LPAREN"
 TOKEN_RPAREN        = "RPAREN"
 
+TOKEN_COMMA			= "COMMA"
+TOKEN_ARROW			= "ARROW"
+
 TOKEN_EOF           = "EOF"
 
 NUMERIC             = "0123456789"
 ALPHABETIC          = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 ALPHANUMERIC        = ALPHABETIC + NUMERIC + "_"
 
+KEYWORD_VARIABLE	= "auto"
+KEYWORD_AND			= "and"
+KEYWORD_OR			= "or"
+KEYWORD_THEN		= "then"
+KEYWORD_FUNCTION    = "const"
+
 KEYWORDS            = [
-    "auto",
-    "and",
-    "or",
+    KEYWORD_VARIABLE,
+    KEYWORD_AND,
+    KEYWORD_OR,
     "not",
     "if",
-    "then",
+    KEYWORD_THEN,
     "elif",
     "else",
     "for",
@@ -41,4 +50,5 @@ KEYWORDS            = [
     "increment",
     "decrement",
     "while",
+    KEYWORD_FUNCTION,
 ]
