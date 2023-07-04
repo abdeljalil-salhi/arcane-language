@@ -9,13 +9,15 @@ from .errors.run_time_error import RunTimeError
 from .base.nodes.variable_access_node import VariableAccessNode
 from .base.nodes.variable_assign_node import VariableAssignNode
 from .base.nodes.if_node import IfNode
+from .base.nodes.for_node import ForNode
+from .base.nodes.while_node import WhileNode
 
 
 class Interpreter:
     def __init__(self) -> None:
         pass
 
-    def visit(self, node, context: "Context") -> float:
+    def visit(self, node, context: "Context") -> "Number":
         method_name = f"visit_{type(node).__name__}"
         method = getattr(self, method_name, self.no_visit_method)
         return method(node, context)
@@ -23,7 +25,7 @@ class Interpreter:
     def no_visit_method(self, node, context: "Context") -> None:
         raise Exception(f"No visit_{type(node).__name__} method defined")
 
-    def visit_NumberNode(self, node: "NumberNode", context: "Context") -> float:
+    def visit_NumberNode(self, node: "NumberNode", context: "Context") -> "Number":
         return RunTimeResult().success(
             Number(node.token.value)
             .set_context(context)
@@ -32,7 +34,7 @@ class Interpreter:
 
     def visit_UnaryOperationNode(
         self, node: "UnaryOperationNode", context: "Context"
-    ) -> float:
+    ) -> "Number":
         response = RunTimeResult()
         number = response.register(self.visit(node.node, context))
         if response.error:
@@ -52,7 +54,7 @@ class Interpreter:
 
     def visit_BinaryOperationNode(
         self, node: "BinaryOperationNode", context: "Context"
-    ) -> float:
+    ) -> "Number":
         response = RunTimeResult()
         left_node: "Number" = response.register(self.visit(node.left_node, context))
         if response.error:
@@ -98,7 +100,7 @@ class Interpreter:
 
     def visit_VariableAccessNode(
         self, node: "VariableAccessNode", context: "Context"
-    ) -> float:
+    ) -> "RunTimeResult":
         response = RunTimeResult()
         variable_name = node.variable_name_token.value
         value = context.symbol_table.get(variable_name)
@@ -125,7 +127,7 @@ class Interpreter:
         context.symbol_table.set(variable_name, value)
         return response.success(value)
 
-    def visit_IfNode(self, node: "IfNode", context: "Context") -> float:
+    def visit_IfNode(self, node: "IfNode", context: "Context") -> "RunTimeResult":
         response = RunTimeResult()
 
         for condition, expr in node.cases:
@@ -143,5 +145,59 @@ class Interpreter:
             if response.error:
                 return response
             return response.success(else_value)
+
+        return response.success(None)
+
+    def visit_ForNode(self, node: "ForNode", context: "Context") -> "RunTimeResult":
+        response = RunTimeResult()
+
+        start_value: "Number" = response.register(self.visit(node.start_value, context))
+        if response.error:
+            return response
+
+        end_value: "Number" = response.register(self.visit(node.end_value, context))
+        if response.error:
+            return response
+
+        if node.increment_value:
+            increment_value: "Number" = response.register(
+                self.visit(node.increment_value, context)
+            )
+            if response.error:
+                return response
+        else:
+            increment_value = Number(1)
+
+        i = start_value.value
+
+        if increment_value.value >= 0:
+            condition = lambda: i < end_value.value
+        else:
+            condition = lambda: i > end_value.value
+
+        while condition():
+            context.symbol_table.set(node.token.value, Number(i))
+            i += increment_value.value
+
+            response.register(self.visit(node.body, context))
+            if response.error:
+                return response
+
+        return response.success(None)
+
+    def visit_WhileNode(self, node: "WhileNode", context: "Context") -> "RunTimeResult":
+        response = RunTimeResult()
+
+        while True:
+            condition: "Number" = response.register(self.visit(node.condition, context))
+            if response.error:
+                return response
+
+            if not condition.is_true():
+                break
+
+            response.register(self.visit(node.body, context))
+            if response.error:
+                return response
 
         return response.success(None)

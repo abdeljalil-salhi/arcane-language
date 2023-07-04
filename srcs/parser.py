@@ -8,6 +8,8 @@ from .base.nodes.unary_operation_node import UnaryOperationNode
 from .base.nodes.variable_access_node import VariableAccessNode
 from .base.nodes.variable_assign_node import VariableAssignNode
 from .base.nodes.if_node import IfNode
+from .base.nodes.for_node import ForNode
+from .base.nodes.while_node import WhileNode
 
 
 class Parser:
@@ -68,6 +70,18 @@ class Parser:
             if response.error:
                 return response
             return response.success(if_expr)
+
+        elif token.matches(TOKEN_KEYWORD, "for"):
+            for_expr = response.register(self.for_expr())
+            if response.error:
+                return response
+            return response.success(for_expr)
+
+        elif token.matches(TOKEN_KEYWORD, "while"):
+            while_expr = response.register(self.while_expr())
+            if response.error:
+                return response
+            return response.success(while_expr)
 
         return response.failure(
             InvalidSyntaxError(
@@ -192,6 +206,123 @@ class Parser:
                 return response
 
         return response.success(IfNode(cases, else_case))
+
+    def for_expr(self) -> "BinaryOperationNode":
+        response = ParseResult()
+
+        if not self.current_token.matches(TOKEN_KEYWORD, "for"):
+            return response.failure(
+                InvalidSyntaxError(
+                    self.current_token.position_start,
+                    self.current_token.position_end,
+                    "Expected 'for'",
+                )
+            )
+        response.register_advance(self.advance)
+
+        if self.current_token.type != TOKEN_IDENTIFIER:
+            return response.failure(
+                InvalidSyntaxError(
+                    self.current_token.position_start,
+                    self.current_token.position_end,
+                    "Expected identifier",
+                )
+            )
+        identifier = self.current_token
+        response.register_advance(self.advance)
+
+        if self.current_token.type != TOKEN_EQ:
+            return response.failure(
+                InvalidSyntaxError(
+                    self.current_token.position_start,
+                    self.current_token.position_end,
+                    "Expected '='",
+                )
+            )
+        response.register_advance(self.advance)
+
+        start_value = response.register(self.expr())
+        if response.error:
+            return response
+
+        if not self.current_token.matches(TOKEN_KEYWORD, "to"):
+            return response.failure(
+                InvalidSyntaxError(
+                    self.current_token.position_start,
+                    self.current_token.position_end,
+                    "Expected 'to'",
+                )
+            )
+        response.register_advance(self.advance)
+
+        end_value = response.register(self.expr())
+        if response.error:
+            return response
+
+        if self.current_token.matches(TOKEN_KEYWORD, "increment"):
+            response.register_advance(self.advance)
+            increment_value = response.register(self.expr())
+            if response.error:
+                return response
+        elif self.current_token.matches(TOKEN_KEYWORD, "decrement"):
+            response.register_advance(self.advance)
+            increment_value: "NumberNode" = response.register(self.expr())
+            if response.error:
+                return response
+            increment_value.token.value *= -1
+        else:
+            increment_value = None
+
+        if not self.current_token.matches(TOKEN_KEYWORD, "then"):
+            return response.failure(
+                InvalidSyntaxError(
+                    self.current_token.position_start,
+                    self.current_token.position_end,
+                    "Expected 'then'",
+                )
+            )
+        response.register_advance(self.advance)
+
+        body = response.register(self.expr())
+        if response.error:
+            return response
+
+        return response.success(
+            ForNode(identifier, start_value, end_value, increment_value, body)
+        )
+
+    def while_expr(self) -> "BinaryOperationNode":
+        response = ParseResult()
+
+        if not self.current_token.matches(TOKEN_KEYWORD, "while"):
+            return response.failure(
+                InvalidSyntaxError(
+                    self.current_token.position_start,
+                    self.current_token.position_end,
+                    "Expected 'while'",
+                )
+            )
+        response.register_advance(self.advance)
+
+        condition = response.register(self.expr())
+        if response.error:
+            return response
+
+        if not self.current_token.matches(TOKEN_KEYWORD, "then"):
+            return response.failure(
+                InvalidSyntaxError(
+                    self.current_token.position_start,
+                    self.current_token.position_end,
+                    "Expected 'then'",
+                )
+            )
+        response.register_advance(self.advance)
+
+        body = response.register(self.expr())
+        if response.error:
+            return response
+
+        return response.success(WhileNode(condition, body))
 
     def expr(self) -> "BinaryOperationNode":
         response = ParseResult()

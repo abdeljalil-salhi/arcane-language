@@ -36,4 +36,9 @@ KEYWORDS            = [
     "then",
     "elif",
     "else",
+    "for",
+    "to",
+    "increment",
+    "decrement",
+    "while",
 ]
