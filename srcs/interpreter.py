@@ -177,6 +177,7 @@ class Interpreter:
 
     def visit_ForNode(self, node: "ForNode", context: "Context") -> "RunTimeResult":
         response = RunTimeResult()
+        elements = []
 
         start_value: "Number" = response.register(self.visit(node.start_value, context))
         if response.error:
@@ -206,14 +207,19 @@ class Interpreter:
             context.symbol_table.set(node.token.value, Number(i))
             i += increment_value.value
 
-            response.register(self.visit(node.body, context))
+            elements.append(response.register(self.visit(node.body, context)))
             if response.error:
                 return response
 
-        return response.success(None)
+        return response.success(
+            List(elements)
+            .set_context(context)
+            .set_position(node.position_start, node.position_end)
+        )
 
     def visit_WhileNode(self, node: "WhileNode", context: "Context") -> "RunTimeResult":
         response = RunTimeResult()
+        elements = []
 
         while True:
             condition: "Number" = response.register(self.visit(node.condition, context))
@@ -223,11 +229,15 @@ class Interpreter:
             if not condition.is_true():
                 break
 
-            response.register(self.visit(node.body, context))
+            elements.append(response.register(self.visit(node.body, context)))
             if response.error:
                 return response
 
-        return response.success(None)
+        return response.success(
+            List(elements)
+            .set_context(context)
+            .set_position(node.position_start, node.position_end)
+        )
 
     def visit_FunctionDefinitionNode(
         self, node: "FunctionDefinitionNode", context: "Context"

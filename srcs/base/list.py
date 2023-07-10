@@ -14,6 +14,9 @@ class List(Value):
             .set_context(self.context)
             .set_pos(self.pos_start, self.pos_end)
         )
+    
+    def __repr__(self) -> str:
+        return f"[{', '.join([str(x) for x in self.elements])}]"
 
     def added_to(self, other: "Value") -> tuple["Value", "RunTimeError"]:
         new_list = self.copy()
