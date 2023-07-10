@@ -143,3 +143,8 @@ class Number(Value):
 
     def notted(self) -> tuple["Number", "RunTimeError"]:
         return Number(int(not self.value)).set_context(self.context), None
+
+
+Number.null = Number(0)
+Number.false = Number(0)
+Number.true = Number(1)
