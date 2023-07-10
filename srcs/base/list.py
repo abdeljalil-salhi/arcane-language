@@ -12,9 +12,9 @@ class List(Value):
         return (
             List(self.elements[:])
             .set_context(self.context)
-            .set_pos(self.pos_start, self.pos_end)
+            .set_position(self.position_start, self.position_end)
         )
-    
+
     def __repr__(self) -> str:
         return f"[{', '.join([str(x) for x in self.elements])}]"
 
@@ -24,22 +24,22 @@ class List(Value):
         return new_list, None
 
     def subtracted_by(self, other: "Value") -> tuple["Value", "RunTimeError"]:
-        if isinstance(other, List):
+        if isinstance(other, Number):
             new_list = self.copy()
             try:
                 new_list.elements.pop(other.value)
                 return new_list, None
             except:
                 return None, RunTimeError(
-                    other.pos_start,
-                    other.pos_end,
-                    "Element at this index could not be removed from list because index is out of bounds",
+                    other.position_start,
+                    other.position_end,
+                    "Index out of bounds",
                     self.context,
                 )
         return None, RunTimeError(
-            other.pos_start,
-            other.pos_end,
-            "Cannot subtract list by non-list",
+            other.position_start,
+            other.position_end,
+            "Cannot subtract list by non-number; index must be a number",
             self.context,
         )
 
@@ -49,9 +49,9 @@ class List(Value):
             new_list.elements.extend(other.elements)
             return new_list, None
         return None, RunTimeError(
-            other.pos_start,
-            other.pos_end,
-            "Cannot multiply list by non-list",
+            other.position_start,
+            other.position_end,
+            "Cannot concatenate list with non-list",
             self.context,
         )
 
@@ -61,14 +61,14 @@ class List(Value):
                 return self.elements[other.value], None
             except:
                 return None, RunTimeError(
-                    other.pos_start,
-                    other.pos_end,
-                    "Element at this index could not be retrieved from list because index is out of bounds",
+                    other.position_start,
+                    other.position_end,
+                    "Index out of bounds",
                     self.context,
                 )
         return None, RunTimeError(
-            other.pos_start,
-            other.pos_end,
-            "Cannot divide list by non-list",
+            other.position_start,
+            other.position_end,
+            "Cannot divide list by non-number; index must be a number",
             self.context,
         )
