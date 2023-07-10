@@ -4,6 +4,7 @@ from .base.nodes.binary_operation_node import BinaryOperationNode
 from .errors.invalid_syntax_error import InvalidSyntaxError
 from .base.parse_result import ParseResult
 from .base.nodes.number_node import NumberNode
+from .base.nodes.string_node import StringNode
 from .base.nodes.unary_operation_node import UnaryOperationNode
 from .base.nodes.variable_access_node import VariableAccessNode
 from .base.nodes.variable_assign_node import VariableAssignNode
@@ -87,6 +88,10 @@ class Parser:
         if token.type in (TOKEN_INT, TOKEN_FLOAT):
             response.register_advance(self.advance)
             return response.success(NumberNode(token))
+        
+        elif token.type == TOKEN_STRING:
+            response.register_advance(self.advance)
+            return response.success(StringNode(token))
 
         elif token.type == TOKEN_IDENTIFIER:
             response.register_advance(self.advance)

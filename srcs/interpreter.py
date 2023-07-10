@@ -14,6 +14,8 @@ from .base.nodes.while_node import WhileNode
 from .base.nodes.function_definition_node import FunctionDefinitionNode
 from .base.nodes.function_call_node import FunctionCallNode
 from .base.function import Function
+from .base.nodes.string_node import StringNode
+from .base.string import String
 
 
 class Interpreter:
@@ -31,6 +33,13 @@ class Interpreter:
     def visit_NumberNode(self, node: "NumberNode", context: "Context") -> "Number":
         return RunTimeResult().success(
             Number(node.token.value)
+            .set_context(context)
+            .set_position(node.position_start, node.position_end)
+        )
+
+    def visit_StringNode(self, node: "StringNode", context: "Context") -> "String":
+        return RunTimeResult().success(
+            String(node.token.value)
             .set_context(context)
             .set_position(node.position_start, node.position_end)
         )

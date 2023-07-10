@@ -33,6 +33,8 @@ class Lexer:
                 tokens.append(self.make_number())
             elif self.current_character in ALPHABETIC:
                 tokens.append(self.make_identifier())
+            elif self.current_character == '"':
+                tokens.append(self.make_string())
             elif self.current_character == "+":
                 tokens.append(Token(TOKEN_PLUS, position_start=self.position))
                 self.advance()
@@ -114,6 +116,35 @@ class Lexer:
         )
 
         return Token(token_type, identifier_string, position_start, self.position)
+
+    def make_string(self) -> "Token":
+        string = ""
+        position_start = self.position.copy()
+        escape_character = False
+        self.advance()
+
+        escape_characters = {
+            "n": "\n",
+            "t": "\t",
+        }
+
+        while self.current_character and (
+            self.current_character != '"' or escape_character
+        ):
+            if escape_character:
+                string += escape_characters.get(
+                    self.current_character, self.current_character
+                )
+            else:
+                if self.current_character == "\\":
+                    escape_character = True
+                else:
+                    string += self.current_character
+            self.advance()
+            escape_character = False
+
+        self.advance()
+        return Token(TOKEN_STRING, string, position_start, self.position)
 
     def make_not_equals(self) -> tuple["Token", BaseError]:
         position_start = self.position.copy()
