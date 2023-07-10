@@ -16,6 +16,8 @@ from .base.nodes.function_call_node import FunctionCallNode
 from .base.function import Function
 from .base.nodes.string_node import StringNode
 from .base.string import String
+from .base.nodes.list_node import ListNode
+from .base.list import List
 
 
 class Interpreter:
@@ -40,6 +42,19 @@ class Interpreter:
     def visit_StringNode(self, node: "StringNode", context: "Context") -> "String":
         return RunTimeResult().success(
             String(node.token.value)
+            .set_context(context)
+            .set_position(node.position_start, node.position_end)
+        )
+
+    def visit_ListNode(self, node: "ListNode", context: "Context") -> "List":
+        response = RunTimeResult()
+        elements = []
+        for element_node in node.element_nodes:
+            elements.append(response.register(self.visit(element_node, context)))
+            if response.error:
+                return response
+        return response.success(
+            List(elements)
             .set_context(context)
             .set_position(node.position_start, node.position_end)
         )

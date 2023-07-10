@@ -13,6 +13,7 @@ from .base.nodes.for_node import ForNode
 from .base.nodes.while_node import WhileNode
 from .base.nodes.function_definition_node import FunctionDefinitionNode
 from .base.nodes.function_call_node import FunctionCallNode
+from .base.nodes.list_node import ListNode
 
 
 class Parser:
@@ -59,7 +60,7 @@ class Parser:
                         InvalidSyntaxError(
                             self.current_token.position_start,
                             self.current_token.position_end,
-                            f"Expected ')', '{KEYWORD_VARIABLE}', int, float, identifier, '+', '-', '(' or 'not'",
+                            f"Expected ')', '{KEYWORD_VARIABLE}', int, float, identifier, '+', '-', '(', '[' or 'not'",
                         )
                     )
 
@@ -88,7 +89,7 @@ class Parser:
         if token.type in (TOKEN_INT, TOKEN_FLOAT):
             response.register_advance(self.advance)
             return response.success(NumberNode(token))
-        
+
         elif token.type == TOKEN_STRING:
             response.register_advance(self.advance)
             return response.success(StringNode(token))
@@ -112,6 +113,12 @@ class Parser:
                     "Expected ')'",
                 )
             )
+
+        elif token.type == TOKEN_LSQUARE:
+            list_expr = response.register(self.list_expr())
+            if response.error:
+                return response
+            return response.success(list_expr)
 
         elif token.matches(TOKEN_KEYWORD, "if"):
             if_expr = response.register(self.if_expr())
@@ -141,7 +148,7 @@ class Parser:
             InvalidSyntaxError(
                 token.position_start,
                 token.position_end,
-                f"Expected int, float, identifier, '+', '-', '(', 'if', 'for', 'while', or '{KEYWORD_FUNCTION}'",
+                f"Expected int, float, identifier, '+', '-', '(', '[', 'if', 'for', 'while', or '{KEYWORD_FUNCTION}'",
             )
         )
 
@@ -193,13 +200,63 @@ class Parser:
                 InvalidSyntaxError(
                     self.current_token.position_start,
                     self.current_token.position_end,
-                    "Expected int, float, identifier, '+', '-', '(' or 'not'",
+                    "Expected int, float, identifier, '+', '-', '(', '[' or 'not'",
                 )
             )
         return response.success(node)
 
     def arith_expr(self) -> "BinaryOperationNode":
         return self.binary_operation(self.term, (TOKEN_PLUS, TOKEN_MINUS))
+
+    def list_expr(self) -> "ListNode":
+        response = ParseResult()
+        element_nodes = []
+        position_start = self.current_token.position_start.copy()
+
+        if self.current_token.type != TOKEN_LSQUARE:
+            return response.failure(
+                InvalidSyntaxError(
+                    self.current_token.position_start,
+                    self.current_token.position_end,
+                    "Expected '['",
+                )
+            )
+        response.register_advance(self.advance)
+
+        if self.current_token.type == TOKEN_RSQUARE:
+            response.register_advance(self.advance)
+        else:
+            element_nodes.append(response.register(self.expr()))
+            if response.error:
+                return response.failure(
+                    InvalidSyntaxError(
+                        self.current_token.position_start,
+                        self.current_token.position_end,
+                        "Expected ']', 'if', 'for', 'while', '{KEYWORD_FUNCTION}', int, float, identifier, '+', '-', '(', '[' or 'not'",
+                    )
+                )
+
+            while self.current_token.type == TOKEN_COMMA:
+                response.register_advance(self.advance)
+                element_nodes.append(response.register(self.expr()))
+                if response.error:
+                    return response
+
+            if self.current_token.type != TOKEN_RSQUARE:
+                return response.failure(
+                    InvalidSyntaxError(
+                        self.current_token.position_start,
+                        self.current_token.position_end,
+                        "Expected ',' or ']'",
+                    )
+                )
+            response.register_advance(self.advance)
+
+        return response.success(
+            ListNode(
+                element_nodes, position_start, self.current_token.position_end.copy()
+            )
+        )
 
     def if_expr(self) -> "BinaryOperationNode":
         response = ParseResult()
@@ -418,7 +475,7 @@ class Parser:
                 InvalidSyntaxError(
                     self.current_token.position_start,
                     self.current_token.position_end,
-                    f"Expected '{KEYWORD_VARIABLE}', 'if', 'for', 'while', '{KEYWORD_FUNCTION}', int, float, identifier, '+', '-', '(' or 'not'",
+                    f"Expected '{KEYWORD_VARIABLE}', 'if', 'for', 'while', '{KEYWORD_FUNCTION}', int, float, identifier, '+', '-', '(', '[' or 'not'",
                 )
             )
         return response.success(node)
