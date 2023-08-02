@@ -17,6 +17,7 @@ global_symbol_table.set("print", BuiltInFunction.print)
 global_symbol_table.set("get_return", BuiltInFunction.get_return)
 global_symbol_table.set("input", BuiltInFunction.input)
 global_symbol_table.set("clear", BuiltInFunction.clear)
+global_symbol_table.set("len", BuiltInFunction.len)
 global_symbol_table.set("is_number", BuiltInFunction.is_number)
 global_symbol_table.set("is_string", BuiltInFunction.is_string)
 global_symbol_table.set("is_list", BuiltInFunction.is_list)
@@ -24,6 +25,7 @@ global_symbol_table.set("is_function", BuiltInFunction.is_function)
 global_symbol_table.set("append", BuiltInFunction.append)
 global_symbol_table.set("pop", BuiltInFunction.pop)
 global_symbol_table.set("extend", BuiltInFunction.extend)
+global_symbol_table.set("run", BuiltInFunction.run)
 
 
 def run(file_name: str, text: str) -> tuple[list["Token"], BaseError]:

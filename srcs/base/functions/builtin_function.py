@@ -5,6 +5,7 @@ from ..context import Context
 from ..number import Number
 from ..string import String
 from ..list import List
+from ...shell import run
 
 
 class BuiltInFunction(BaseFunction):
@@ -44,26 +45,43 @@ class BuiltInFunction(BaseFunction):
         )
 
     def execute_print(self, context: "Context") -> "RunTimeResult":
-        string = str(context.symbol_table.get("value"))
-        print(string)
-        return RunTimeResult().success(Number(len(string)))
+        value = str(context.symbol_table.get("value"))
+        print(value)
+        return RunTimeResult().success(Number(len(value)))
 
     def execute_get_return(self, context: "Context") -> "RunTimeResult":
         return RunTimeResult().success(String(str(context.symbol_table.get("value"))))
 
     def execute_input(self, _: "Context") -> "RunTimeResult":
-        text = input("> ")
+        value = input("> ")
         try:
-            number = int(text)
+            number = int(value)
             return RunTimeResult().success(Number(number))
         except ValueError:
-            return RunTimeResult().success(String(text))
+            return RunTimeResult().success(String(value))
 
     def execute_clear(self, _: "Context") -> "RunTimeResult":
         from os import system, name
 
         system("cls" if name == "nt" else "clear")
         return RunTimeResult().success(Number.null)
+
+    def execute_len(self, context: "Context") -> "RunTimeResult":
+        value = context.symbol_table.get("value")
+
+        if isinstance(value, List):
+            return RunTimeResult().success(Number(len(value.elements)))
+        try:
+            return RunTimeResult().success(Number(len(str(value))))
+        except:
+            return RunTimeResult().failure(
+                RunTimeError(
+                    self.position_start,
+                    self.position_end,
+                    "Argument must be string, number or list",
+                    context,
+                )
+            )
 
     def execute_is_number(self, context: "Context") -> "RunTimeResult":
         return RunTimeResult().success(
@@ -174,10 +192,51 @@ class BuiltInFunction(BaseFunction):
         first_list.elements.extend(second_list.elements)
         return RunTimeResult().success(Number(len(first_list.elements)))
 
+    def execute_run(self, context: "Context") -> "RunTimeResult":
+        file_name = context.symbol_table.get("file_name")
+
+        if not isinstance(file_name, String):
+            return RunTimeResult().failure(
+                RunTimeError(
+                    self.position_start,
+                    self.position_end,
+                    "Argument must be string",
+                    context,
+                )
+            )
+
+        file_name = file_name.value
+        try:
+            with open(file_name, "r") as f:
+                script = f.read()
+        except Exception as e:
+            return RunTimeResult().failure(
+                RunTimeError(
+                    self.position_start,
+                    self.position_end,
+                    f'Failed to load file "{file_name}"\n{str(e)}',
+                    context,
+                )
+            )
+
+        _, error = run(file_name, script)
+        if error:
+            return RunTimeResult().failure(
+                RunTimeError(
+                    self.position_start,
+                    self.position_end,
+                    f'Failed to finish executing file "{file_name}"\n{error.as_string()}',
+                    context,
+                )
+            )
+
+        return RunTimeResult().success(Number.null)
+
     execute_print.argument_names = ["value"]
     execute_get_return.argument_names = ["value"]
     execute_input.argument_names = []
     execute_clear.argument_names = []
+    execute_len.argument_names = ["value"]
     execute_is_number.argument_names = ["value"]
     execute_is_string.argument_names = ["value"]
     execute_is_list.argument_names = ["value"]
@@ -185,12 +244,14 @@ class BuiltInFunction(BaseFunction):
     execute_append.argument_names = ["list", "value"]
     execute_pop.argument_names = ["list", "index"]
     execute_extend.argument_names = ["first_list", "second_list"]
+    execute_run.argument_names = ["file_name"]
 
 
 BuiltInFunction.print = BuiltInFunction("print")
 BuiltInFunction.get_return = BuiltInFunction("get_return")
 BuiltInFunction.input = BuiltInFunction("input")
 BuiltInFunction.clear = BuiltInFunction("clear")
+BuiltInFunction.len = BuiltInFunction("len")
 BuiltInFunction.is_number = BuiltInFunction("is_number")
 BuiltInFunction.is_string = BuiltInFunction("is_string")
 BuiltInFunction.is_list = BuiltInFunction("is_list")
@@ -198,3 +259,4 @@ BuiltInFunction.is_function = BuiltInFunction("is_function")
 BuiltInFunction.append = BuiltInFunction("append")
 BuiltInFunction.pop = BuiltInFunction("pop")
 BuiltInFunction.extend = BuiltInFunction("extend")
+BuiltInFunction.run = BuiltInFunction("run")
