@@ -207,9 +207,9 @@ class Interpreter:
         i = start_value.value
 
         if increment_value.value >= 0:
-            condition = lambda: i < end_value.value
+            condition = lambda: i <= end_value.value
         else:
-            condition = lambda: i > end_value.value
+            condition = lambda: i >= end_value.value
 
         while condition():
             context.symbol_table.set(node.token.value, Number(i))

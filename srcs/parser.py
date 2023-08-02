@@ -244,7 +244,7 @@ class Parser:
                     InvalidSyntaxError(
                         self.current_token.position_start,
                         self.current_token.position_end,
-                        "Expected ']', 'if', 'for', 'while', '{KEYWORD_FUNCTION}', int, float, identifier, '+', '-', '(', '[' or 'not'",
+                        f"Expected ']', 'if', 'for', 'while', '{KEYWORD_FUNCTION}', int, float, identifier, '+', '-', '(', '[' or 'not'",
                     )
                 )
 
@@ -615,7 +615,7 @@ class Parser:
                 InvalidSyntaxError(
                     self.current_token.position_start,
                     self.current_token.position_end,
-                    "Expected 'return', 'continue', 'break', 'if', 'for', 'while', '{KEYWORD_FUNCTION}', int, float, identifier, '+', '-', '(', '[' or 'not'",
+                    f"Expected 'return', 'continue', 'break', 'if', 'for', 'while', '{KEYWORD_FUNCTION}', int, float, identifier, '+', '-', '(', '[' or 'not'",
                 )
             )
 

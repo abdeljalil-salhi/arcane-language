@@ -29,6 +29,12 @@ class Lexer:
         while self.current_character:
             if self.current_character in " \t":
                 self.advance()
+            elif self.current_character == "#":
+                self.advance()
+                while not self.current_character in ";\n":
+                    self.advance()
+                tokens.append(Token(TOKEN_NEWLINE, position_start=self.position))
+                self.advance()
             elif self.current_character in ";\n":
                 tokens.append(Token(TOKEN_NEWLINE, position_start=self.position))
                 self.advance()

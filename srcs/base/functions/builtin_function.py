@@ -5,7 +5,6 @@ from ..context import Context
 from ..number import Number
 from ..string import String
 from ..list import List
-from ...shell import run
 
 
 class BuiltInFunction(BaseFunction):
@@ -48,9 +47,6 @@ class BuiltInFunction(BaseFunction):
         value = str(context.symbol_table.get("value"))
         print(value)
         return RunTimeResult().success(Number(len(value)))
-
-    def execute_get_return(self, context: "Context") -> "RunTimeResult":
-        return RunTimeResult().success(String(str(context.symbol_table.get("value"))))
 
     def execute_input(self, _: "Context") -> "RunTimeResult":
         value = input("> ")
@@ -193,8 +189,9 @@ class BuiltInFunction(BaseFunction):
         return RunTimeResult().success(Number(len(first_list.elements)))
 
     def execute_run(self, context: "Context") -> "RunTimeResult":
-        file_name = context.symbol_table.get("file_name")
+        from ...shell import run
 
+        file_name = context.symbol_table.get("file_name")
         if not isinstance(file_name, String):
             return RunTimeResult().failure(
                 RunTimeError(
@@ -233,7 +230,6 @@ class BuiltInFunction(BaseFunction):
         return RunTimeResult().success(Number.null)
 
     execute_print.argument_names = ["value"]
-    execute_get_return.argument_names = ["value"]
     execute_input.argument_names = []
     execute_clear.argument_names = []
     execute_len.argument_names = ["value"]
@@ -248,7 +244,6 @@ class BuiltInFunction(BaseFunction):
 
 
 BuiltInFunction.print = BuiltInFunction("print")
-BuiltInFunction.get_return = BuiltInFunction("get_return")
 BuiltInFunction.input = BuiltInFunction("input")
 BuiltInFunction.clear = BuiltInFunction("clear")
 BuiltInFunction.len = BuiltInFunction("len")
