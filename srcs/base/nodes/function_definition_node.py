@@ -8,7 +8,7 @@ class FunctionDefinitionNode:
         token: "Token",
         arguments: list,
         body: "BinaryOperationNode",
-        is_null: bool = False,
+        is_automatic_return: bool = False,
     ) -> None:
         self.token = token
         self.arguments = arguments
@@ -20,4 +20,4 @@ class FunctionDefinitionNode:
         else:
             self.position_start = self.body[0].position_start
         self.position_end = self.body.position_end
-        self.is_null = is_null
+        self.is_automatic_return = is_automatic_return

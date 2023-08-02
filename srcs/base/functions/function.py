@@ -11,12 +11,12 @@ class Function(BaseFunction):
         name: str,
         body_node: "BinaryOperationNode",
         argument_names: list,
-        is_null: bool = False,
+        is_automatic_return: bool = False,
     ) -> None:
         super().__init__(name)
         self.body_node = body_node
         self.argument_names = argument_names
-        self.is_null = is_null
+        self.is_automatic_return = is_automatic_return
 
     def __repr__(self) -> str:
         return f"<function {self.name}>"
@@ -31,17 +31,23 @@ class Function(BaseFunction):
         response.register(
             self.check_and_populate_arguments(self.argument_names, arguments, context)
         )
-        if response.error:
+        if response.should_return():
             return response
 
         value = response.register(interpreter.visit(self.body_node, context))
-        if response.error:
+        if response.should_return() and response.return_value is None:
             return response
-        return response.success(Number.null if self.is_null else value)
+        return response.success(
+            (value if self.is_automatic_return else None)
+            or response.return_value
+            or Number.null
+        )
 
     def copy(self) -> "Function":
         return (
-            Function(self.name, self.body_node, self.argument_names, self.is_null)
+            Function(
+                self.name, self.body_node, self.argument_names, self.is_automatic_return
+            )
             .set_context(self.context)
             .set_position(self.position_start, self.position_end)
         )

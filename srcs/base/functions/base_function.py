@@ -60,7 +60,7 @@ class BaseFunction(Value):
     ) -> "RunTimeResult":
         response = RunTimeResult()
         response.register(self.check_arguments(argument_names, arguments))
-        if response.error:
+        if response.should_return():
             return response
         self.populate_arguments(argument_names, arguments, execution_context)
         return response.success(None)

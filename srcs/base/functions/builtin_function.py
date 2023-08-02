@@ -24,11 +24,11 @@ class BuiltInFunction(BaseFunction):
         response.register(
             self.check_and_populate_arguments(method.argument_names, arguments, context)
         )
-        if response.error:
+        if response.should_return():
             return response
 
         return_value = response.register(method(context))
-        if response.error:
+        if response.should_return():
             return response
 
         return response.success(return_value)

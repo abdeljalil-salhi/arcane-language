@@ -14,6 +14,9 @@ from .base.nodes.while_node import WhileNode
 from .base.nodes.function_definition_node import FunctionDefinitionNode
 from .base.nodes.function_call_node import FunctionCallNode
 from .base.nodes.list_node import ListNode
+from .base.nodes.return_node import ReturnNode
+from .base.nodes.continue_node import ContinueNode
+from .base.nodes.break_node import BreakNode
 
 
 class Parser:
@@ -304,7 +307,7 @@ class Parser:
                         )
                     )
             else:
-                expr = response.register(self.expr())
+                expr = response.register(self.statement())
                 if response.error:
                     return response
                 else_case = (expr, False)
@@ -355,7 +358,7 @@ class Parser:
                 new_cases, else_case = all_cases
                 cases.extend(new_cases)
         else:
-            expr = response.register(self.expr())
+            expr = response.register(self.statement())
             if response.error:
                 return response
             cases.append((condition, expr, False))
@@ -481,7 +484,7 @@ class Parser:
                 ForNode(identifier, start_value, end_value, increment_value, body, True)
             )
 
-        body = response.register(self.expr())
+        body = response.register(self.statement())
         if response.error:
             return response
 
@@ -534,7 +537,7 @@ class Parser:
 
             return response.success(WhileNode(condition, body, True))
 
-        body = response.register(self.expr())
+        body = response.register(self.statement())
         if response.error:
             return response
 
@@ -548,7 +551,7 @@ class Parser:
         while self.current_token.type == TOKEN_NEWLINE:
             response.register_advance(self.advance)
 
-        statement = response.register(self.expr())
+        statement = response.register(self.statement())
         if response.error:
             return response
         statements.append(statement)
@@ -563,7 +566,7 @@ class Parser:
                 more_statements = False
             if not more_statements:
                 break
-            statement = response.try_register(self.expr())
+            statement = response.try_register(self.statement())
             if not statement:
                 self.reverse(response.reverse_count)
                 more_statements = False
@@ -575,6 +578,48 @@ class Parser:
                 statements, position_start, self.current_token.position_start.copy()
             )
         )
+
+    def statement(self) -> "BinaryOperationNode":
+        response = ParseResult()
+        position_start = self.current_token.position_start.copy()
+
+        if self.current_token.matches(TOKEN_KEYWORD, "return"):
+            response.register_advance(self.advance)
+
+            expr = response.try_register(self.expr())
+            if not expr:
+                self.reverse(response.reverse_count)
+            return response.success(
+                ReturnNode(
+                    expr, position_start, self.current_token.position_start.copy()
+                )
+            )
+
+        if self.current_token.matches(TOKEN_KEYWORD, "continue"):
+            response.register_advance(self.advance)
+
+            return response.success(
+                ContinueNode(position_start, self.current_token.position_start.copy())
+            )
+
+        if self.current_token.matches(TOKEN_KEYWORD, "break"):
+            response.register_advance(self.advance)
+
+            return response.success(
+                BreakNode(position_start, self.current_token.position_start.copy())
+            )
+
+        expr = response.register(self.expr())
+        if response.error:
+            return response.failure(
+                InvalidSyntaxError(
+                    self.current_token.position_start,
+                    self.current_token.position_end,
+                    "Expected 'return', 'continue', 'break', 'if', 'for', 'while', '{KEYWORD_FUNCTION}', int, float, identifier, '+', '-', '(', '[' or 'not'",
+                )
+            )
+
+        return response.success(expr)
 
     def expr(self) -> "BinaryOperationNode":
         response = ParseResult()
@@ -727,7 +772,7 @@ class Parser:
 
             return response.success(
                 FunctionDefinitionNode(
-                    identifier_token, argument_name_tokens, node_to_return, False
+                    identifier_token, argument_name_tokens, node_to_return, True
                 )
             )
 
@@ -756,5 +801,5 @@ class Parser:
         response.register_advance(self.advance)
 
         return response.success(
-            FunctionDefinitionNode(identifier_token, argument_name_tokens, body, True)
+            FunctionDefinitionNode(identifier_token, argument_name_tokens, body, False)
         )

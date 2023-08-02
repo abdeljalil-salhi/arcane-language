@@ -55,5 +55,8 @@ KEYWORDS            = [
     "decrement",
     "while",
     KEYWORD_FUNCTION,
-    "end"
+    "end",
+    "return",
+    "continue",
+    "break"
 ]

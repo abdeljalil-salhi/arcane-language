@@ -18,6 +18,9 @@ from .base.nodes.string_node import StringNode
 from .base.string import String
 from .base.nodes.list_node import ListNode
 from .base.list import List
+from .base.nodes.return_node import ReturnNode
+from .base.nodes.continue_node import ContinueNode
+from .base.nodes.break_node import BreakNode
 
 
 class Interpreter:
@@ -51,7 +54,7 @@ class Interpreter:
         elements = []
         for element_node in node.element_nodes:
             elements.append(response.register(self.visit(element_node, context)))
-            if response.error:
+            if response.should_return():
                 return response
         return response.success(
             List(elements)
@@ -64,7 +67,7 @@ class Interpreter:
     ) -> "Number":
         response = RunTimeResult()
         number = response.register(self.visit(node.node, context))
-        if response.error:
+        if response.should_return():
             return response
 
         error = None
@@ -84,10 +87,10 @@ class Interpreter:
     ) -> "Number":
         response = RunTimeResult()
         left_node: "Number" = response.register(self.visit(node.left_node, context))
-        if response.error:
+        if response.should_return():
             return response
         right_node: "Number" = response.register(self.visit(node.right_node, context))
-        if response.error:
+        if response.should_return():
             return response
 
         if node.operator_token.type == TOKEN_PLUS:
@@ -153,7 +156,7 @@ class Interpreter:
         response = RunTimeResult()
         variable_name = node.variable_name_token.value
         value = response.register(self.visit(node.value_node, context))
-        if response.error:
+        if response.should_return():
             return response
         context.symbol_table.set(variable_name, value)
         return response.success(value)
@@ -163,18 +166,18 @@ class Interpreter:
 
         for condition, expr, is_null in node.cases:
             condition_value = response.register(self.visit(condition, context))
-            if response.error:
+            if response.should_return():
                 return response
             if condition_value.is_true():
                 expr_value = response.register(self.visit(expr, context))
-                if response.error:
+                if response.should_return():
                     return response
                 return response.success(Number.null if is_null else expr_value)
 
         if node.else_case:
             expr, is_null = node.else_case
             else_value = response.register(self.visit(expr, context))
-            if response.error:
+            if response.should_return():
                 return response
             return response.success(Number.null if is_null else else_value)
 
@@ -185,18 +188,18 @@ class Interpreter:
         elements = []
 
         start_value: "Number" = response.register(self.visit(node.start_value, context))
-        if response.error:
+        if response.should_return():
             return response
 
         end_value: "Number" = response.register(self.visit(node.end_value, context))
-        if response.error:
+        if response.should_return():
             return response
 
         if node.increment_value:
             increment_value: "Number" = response.register(
                 self.visit(node.increment_value, context)
             )
-            if response.error:
+            if response.should_return():
                 return response
         else:
             increment_value = Number(1)
@@ -212,9 +215,19 @@ class Interpreter:
             context.symbol_table.set(node.token.value, Number(i))
             i += increment_value.value
 
-            elements.append(response.register(self.visit(node.body, context)))
-            if response.error:
+            value = response.register(self.visit(node.body, context))
+            if (
+                response.should_return()
+                and not response.continue_loop
+                and not response.break_loop
+            ):
                 return response
+            if response.continue_loop:
+                continue
+            if response.break_loop:
+                break
+
+            elements.append(value)
 
         return response.success(
             Number.null
@@ -230,15 +243,25 @@ class Interpreter:
 
         while True:
             condition: "Number" = response.register(self.visit(node.condition, context))
-            if response.error:
+            if response.should_return():
                 return response
 
             if not condition.is_true():
                 break
 
-            elements.append(response.register(self.visit(node.body, context)))
-            if response.error:
+            value = response.register(self.visit(node.body, context))
+            if (
+                response.should_return()
+                and not response.continue_loop
+                and not response.break_loop
+            ):
                 return response
+            if response.continue_loop:
+                continue
+            if response.break_loop:
+                break
+
+            elements.append(value)
 
         return response.success(
             Number.null
@@ -256,7 +279,12 @@ class Interpreter:
         function_body = node.body
         function_arguments = [argument.value for argument in node.arguments]
         function_value = (
-            Function(function_name, function_body, function_arguments, node.is_null)
+            Function(
+                function_name,
+                function_body,
+                function_arguments,
+                node.is_automatic_return,
+            )
             .set_context(context)
             .set_position(node.position_start, node.position_end)
         )
@@ -272,17 +300,17 @@ class Interpreter:
         value_to_call: "Function" = response.register(
             self.visit(node.node_to_call, context)
         )
-        if response.error:
+        if response.should_return():
             return response
         value_to_call = value_to_call.copy().set_position(
             node.position_start, node.position_end
         )
         for argument_node in node.arguments:
             arguments.append(response.register(self.visit(argument_node, context)))
-            if response.error:
+            if response.should_return():
                 return response
         return_value = response.register(value_to_call.execute(arguments))
-        if response.error:
+        if response.should_return():
             return response
         return_value = (
             return_value.copy()
@@ -290,3 +318,23 @@ class Interpreter:
             .set_context(context)
         )
         return response.success(return_value)
+
+    def visit_ReturnNode(
+        self, node: "ReturnNode", context: "Context"
+    ) -> "RunTimeResult":
+        response = RunTimeResult()
+
+        if node.to_return:
+            value = response.register(self.visit(node.to_return, context))
+            if response.should_return():
+                return response
+        else:
+            value = Number.null
+
+        return response.success_return(value)
+
+    def visit_ContinueNode(self, _: "ContinueNode", __: "Context") -> "RunTimeResult":
+        return RunTimeResult().success_continue()
+
+    def visit_BreakNode(self, _: "BreakNode", __: "Context") -> "RunTimeResult":
+        return RunTimeResult().success_break()
