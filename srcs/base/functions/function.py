@@ -1,7 +1,6 @@
-from .nodes.binary_operation_node import BinaryOperationNode
-from ..errors.run_time_error import RunTimeError
-from .run_time_result import RunTimeResult
-from .value import Value
+from ..nodes.binary_operation_node import BinaryOperationNode
+from ..run_time_result import RunTimeResult
+from ..value import Value
 from .base_function import BaseFunction
 
 
@@ -17,7 +16,7 @@ class Function(BaseFunction):
         return f"<function {self.name}>"
 
     def execute(self, arguments: list["Value"]) -> "RunTimeResult":
-        from ..interpreter import Interpreter
+        from ...interpreter import Interpreter
 
         response = RunTimeResult()
         interpreter = Interpreter()

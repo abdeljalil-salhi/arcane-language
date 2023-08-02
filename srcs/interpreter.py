@@ -13,7 +13,7 @@ from .base.nodes.for_node import ForNode
 from .base.nodes.while_node import WhileNode
 from .base.nodes.function_definition_node import FunctionDefinitionNode
 from .base.nodes.function_call_node import FunctionCallNode
-from .base.function import Function
+from .base.functions.function import Function
 from .base.nodes.string_node import StringNode
 from .base.string import String
 from .base.nodes.list_node import ListNode

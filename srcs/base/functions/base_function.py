@@ -1,8 +1,8 @@
-from .value import Value
-from .context import Context
-from .symbol_table import SymbolTable
-from .run_time_result import RunTimeResult
-from ..errors.run_time_error import RunTimeError
+from ..value import Value
+from ..context import Context
+from ..symbol_table import SymbolTable
+from ..run_time_result import RunTimeResult
+from ...errors.run_time_error import RunTimeError
 
 
 class BaseFunction(Value):
@@ -18,9 +18,9 @@ class BaseFunction(Value):
     def check_arguments(
         self, argument_names: list, arguments: list["Value"]
     ) -> "RunTimeResult":
-        res = RunTimeResult()
+        response = RunTimeResult()
         if len(arguments) > len(argument_names):
-            return res.failure(
+            return response.failure(
                 RunTimeError(
                     self.position_start,
                     self.position_end,
@@ -30,7 +30,7 @@ class BaseFunction(Value):
             )
 
         if len(arguments) < len(argument_names):
-            return res.failure(
+            return response.failure(
                 RunTimeError(
                     self.position_start,
                     self.position_end,
@@ -38,7 +38,7 @@ class BaseFunction(Value):
                     self.context,
                 )
             )
-        return res.success(None)
+        return response.success(None)
 
     def populate_arguments(
         self,
@@ -58,9 +58,9 @@ class BaseFunction(Value):
         arguments: list["Value"],
         execution_context: "Context",
     ) -> "RunTimeResult":
-        res = RunTimeResult()
-        res.register(self.check_arguments(argument_names, arguments))
-        if res.error:
-            return res, None
+        response = RunTimeResult()
+        response.register(self.check_arguments(argument_names, arguments))
+        if response.error:
+            return response
         self.populate_arguments(argument_names, arguments, execution_context)
-        return res.success(None)
+        return response.success(None)
