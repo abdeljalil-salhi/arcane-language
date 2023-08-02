@@ -10,13 +10,13 @@ class List(Value):
 
     def copy(self) -> "List":
         return (
-            List(self.elements[:])
+            List(self.elements)
             .set_context(self.context)
             .set_position(self.position_start, self.position_end)
         )
 
     def __repr__(self) -> str:
-        return f"[{', '.join([str(x) for x in self.elements])}]"
+        return f"[{', '.join([repr(x) for x in self.elements])}]"
 
     def added_to(self, other: "Value") -> tuple["Value", "RunTimeError"]:
         new_list = self.copy()

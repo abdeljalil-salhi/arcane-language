@@ -148,3 +148,6 @@ class Number(Value):
 Number.null = Number(0)
 Number.false = Number(0)
 Number.true = Number(1)
+Number.PI = Number(
+    3.141592653589793238462643383279502884197169399375105820974944592307816406286
+)

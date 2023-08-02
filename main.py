@@ -7,13 +7,12 @@ if __name__ == "__main__":
             if line == "":
                 continue
             elif line == "exit":
-                print("Bye!")
-                exit(0)
+                print("Bye!"), exit(0)
             result, error = run("<stdin>", line)
             if error:
                 print(error.as_string())
             elif result:
-                print(result)
+                print(repr(result))
 
     except KeyboardInterrupt:
         print("\nBye!")

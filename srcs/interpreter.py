@@ -140,7 +140,11 @@ class Interpreter:
                     context,
                 )
             )
-        value = value.copy().set_position(node.position_start, node.position_end)
+        value = (
+            value.copy()
+            .set_position(node.position_start, node.position_end)
+            .set_context(context)
+        )
         return response.success(value)
 
     def visit_VariableAssignNode(
@@ -275,4 +279,9 @@ class Interpreter:
         return_value = response.register(value_to_call.execute(arguments))
         if response.error:
             return response
+        return_value = (
+            return_value.copy()
+            .set_position(node.position_start, node.position_end)
+            .set_context(context)
+        )
         return response.success(return_value)
