@@ -26,6 +26,7 @@ TOKEN_RSQUARE       = "RSQUARE"
 
 TOKEN_COMMA			= "COMMA"
 TOKEN_ARROW			= "ARROW"
+TOKEN_NEWLINE       = "NEWLINE"
 
 TOKEN_EOF           = "EOF"
 
@@ -54,4 +55,5 @@ KEYWORDS            = [
     "decrement",
     "while",
     KEYWORD_FUNCTION,
+    "end"
 ]

@@ -11,8 +11,10 @@ if __name__ == "__main__":
             result, error = run("<stdin>", line)
             if error:
                 print(error.as_string())
-            elif result:
+            elif result and len(result.elements) > 1:
                 print(repr(result))
+            elif result:
+                print(repr(result.elements[0]))
 
     except KeyboardInterrupt:
         print("\nBye!")

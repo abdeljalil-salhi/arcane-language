@@ -161,7 +161,7 @@ class Interpreter:
     def visit_IfNode(self, node: "IfNode", context: "Context") -> "RunTimeResult":
         response = RunTimeResult()
 
-        for condition, expr in node.cases:
+        for condition, expr, is_null in node.cases:
             condition_value = response.register(self.visit(condition, context))
             if response.error:
                 return response
@@ -169,15 +169,16 @@ class Interpreter:
                 expr_value = response.register(self.visit(expr, context))
                 if response.error:
                     return response
-                return response.success(expr_value)
+                return response.success(Number.null if is_null else expr_value)
 
         if node.else_case:
-            else_value = response.register(self.visit(node.else_case, context))
+            expr, is_null = node.else_case
+            else_value = response.register(self.visit(expr, context))
             if response.error:
                 return response
-            return response.success(else_value)
+            return response.success(Number.null if is_null else else_value)
 
-        return response.success(None)
+        return response.success(Number.null)
 
     def visit_ForNode(self, node: "ForNode", context: "Context") -> "RunTimeResult":
         response = RunTimeResult()
@@ -216,7 +217,9 @@ class Interpreter:
                 return response
 
         return response.success(
-            List(elements)
+            Number.null
+            if node.is_null
+            else List(elements)
             .set_context(context)
             .set_position(node.position_start, node.position_end)
         )
@@ -238,7 +241,9 @@ class Interpreter:
                 return response
 
         return response.success(
-            List(elements)
+            Number.null
+            if node.is_null
+            else List(elements)
             .set_context(context)
             .set_position(node.position_start, node.position_end)
         )
@@ -251,7 +256,7 @@ class Interpreter:
         function_body = node.body
         function_arguments = [argument.value for argument in node.arguments]
         function_value = (
-            Function(function_name, function_body, function_arguments)
+            Function(function_name, function_body, function_arguments, node.is_null)
             .set_context(context)
             .set_position(node.position_start, node.position_end)
         )

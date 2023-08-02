@@ -20,17 +20,26 @@ class Parser:
     def __init__(self, tokens: list["Token"]) -> None:
         self.tokens = tokens
         self.token_index = -1
+        self.current_token: "Token" = None
 
         self.advance()
 
-    def advance(self) -> None:
+    def advance(self) -> "Token":
         self.token_index += 1
-        if self.token_index < len(self.tokens):
-            self.current_token = self.tokens[self.token_index]
+        self.update_current_token()
         return self.current_token
 
+    def reverse(self, count: int = 1) -> "Token":
+        self.token_index -= count
+        self.update_current_token()
+        return self.current_token
+
+    def update_current_token(self) -> None:
+        if self.token_index >= 0 and self.token_index < len(self.tokens):
+            self.current_token = self.tokens[self.token_index]
+
     def parse(self) -> "BinaryOperationNode":
-        response = self.expr()
+        response = self.statements()
         if not response.error and self.current_token.type != TOKEN_EOF:
             return response.failure(
                 InvalidSyntaxError(
@@ -260,15 +269,59 @@ class Parser:
 
     def if_expr(self) -> "BinaryOperationNode":
         response = ParseResult()
+        all_cases = response.register(self.condition_expr("if"))
+        if response.error:
+            return response
+
+        cases, else_case = all_cases
+        return response.success(IfNode(cases, else_case))
+
+    def elif_expr(self) -> "BinaryOperationNode":
+        return self.condition_expr("elif")
+
+    def else_expr(self) -> "BinaryOperationNode":
+        response = ParseResult()
+        else_case = None
+
+        if self.current_token.matches(TOKEN_KEYWORD, "else"):
+            response.register_advance(self.advance)
+
+            if self.current_token.type == TOKEN_NEWLINE:
+                response.register_advance(self.advance)
+                statements = response.register(self.statements())
+                if response.error:
+                    return response
+                else_case = (statements, True)
+
+                if self.current_token.matches(TOKEN_KEYWORD, "end"):
+                    response.register_advance(self.advance)
+                else:
+                    return response.failure(
+                        InvalidSyntaxError(
+                            self.current_token.position_start,
+                            self.current_token.position_end,
+                            f"Expected 'end'",
+                        )
+                    )
+            else:
+                expr = response.register(self.expr())
+                if response.error:
+                    return response
+                else_case = (expr, False)
+
+        return response.success(else_case)
+
+    def condition_expr(self, case_keyword: str) -> "BinaryOperationNode":
+        response = ParseResult()
         cases = []
         else_case = None
 
-        if not self.current_token.matches(TOKEN_KEYWORD, "if"):
+        if not self.current_token.matches(TOKEN_KEYWORD, case_keyword):
             return response.failure(
                 InvalidSyntaxError(
                     self.current_token.position_start,
                     self.current_token.position_end,
-                    "Expected 'if'",
+                    f"Expected '{case_keyword}'",
                 )
             )
         response.register_advance(self.advance)
@@ -285,38 +338,52 @@ class Parser:
                 )
             )
         response.register_advance(self.advance)
-        expr = response.register(self.expr())
-        if response.error:
-            return response
-        cases.append((condition, expr))
 
-        while self.current_token.matches(TOKEN_KEYWORD, "elif"):
+        if self.current_token.type == TOKEN_NEWLINE:
             response.register_advance(self.advance)
-            condition = response.register(self.expr())
+            statements = response.register(self.statements())
             if response.error:
                 return response
+            cases.append((condition, statements, True))
 
-            if not self.current_token.matches(TOKEN_KEYWORD, KEYWORD_THEN):
-                return response.failure(
-                    InvalidSyntaxError(
-                        self.current_token.position_start,
-                        self.current_token.position_end,
-                        f"Expected '{KEYWORD_THEN}'",
-                    )
-                )
-            response.register_advance(self.advance)
+            if self.current_token.matches(TOKEN_KEYWORD, "end"):
+                response.register_advance(self.advance)
+            else:
+                all_cases = response.register(self.secondary_condition_expr())
+                if response.error:
+                    return response
+                new_cases, else_case = all_cases
+                cases.extend(new_cases)
+        else:
             expr = response.register(self.expr())
             if response.error:
                 return response
-            cases.append((condition, expr))
+            cases.append((condition, expr, False))
 
-        if self.current_token.matches(TOKEN_KEYWORD, "else"):
-            response.register_advance(self.advance)
-            else_case = response.register(self.expr())
+            all_cases = response.register(self.secondary_condition_expr())
+            if response.error:
+                return response
+            new_cases, else_case = all_cases
+            cases.extend(new_cases)
+
+        return response.success((cases, else_case))
+
+    def secondary_condition_expr(self) -> "BinaryOperationNode":
+        response = ParseResult()
+        cases = []
+        else_case = None
+
+        if self.current_token.matches(TOKEN_KEYWORD, "elif"):
+            all_cases = response.register(self.elif_expr())
+            if response.error:
+                return response
+            cases, else_case = all_cases
+        else:
+            else_case = response.register(self.else_expr())
             if response.error:
                 return response
 
-        return response.success(IfNode(cases, else_case))
+        return response.success((cases, else_case))
 
     def for_expr(self) -> "BinaryOperationNode":
         response = ParseResult()
@@ -394,12 +461,32 @@ class Parser:
             )
         response.register_advance(self.advance)
 
+        if self.current_token.type == TOKEN_NEWLINE:
+            response.register_advance(self.advance)
+            body = response.register(self.statements())
+            if response.error:
+                return response
+
+            if not self.current_token.matches(TOKEN_KEYWORD, "end"):
+                return response.failure(
+                    InvalidSyntaxError(
+                        self.current_token.position_start,
+                        self.current_token.position_end,
+                        "Expected 'end'",
+                    )
+                )
+            response.register_advance(self.advance)
+
+            return response.success(
+                ForNode(identifier, start_value, end_value, increment_value, body, True)
+            )
+
         body = response.register(self.expr())
         if response.error:
             return response
 
         return response.success(
-            ForNode(identifier, start_value, end_value, increment_value, body)
+            ForNode(identifier, start_value, end_value, increment_value, body, False)
         )
 
     def while_expr(self) -> "BinaryOperationNode":
@@ -429,11 +516,65 @@ class Parser:
             )
         response.register_advance(self.advance)
 
+        if self.current_token.type == TOKEN_NEWLINE:
+            response.register_advance(self.advance)
+            body = response.register(self.statements())
+            if response.error:
+                return response
+
+            if not self.current_token.matches(TOKEN_KEYWORD, "end"):
+                return response.failure(
+                    InvalidSyntaxError(
+                        self.current_token.position_start,
+                        self.current_token.position_end,
+                        "Expected 'end'",
+                    )
+                )
+            response.register_advance(self.advance)
+
+            return response.success(WhileNode(condition, body, True))
+
         body = response.register(self.expr())
         if response.error:
             return response
 
-        return response.success(WhileNode(condition, body))
+        return response.success(WhileNode(condition, body, False))
+
+    def statements(self) -> "ListNode":
+        response = ParseResult()
+        statements = []
+        position_start = self.current_token.position_start.copy()
+
+        while self.current_token.type == TOKEN_NEWLINE:
+            response.register_advance(self.advance)
+
+        statement = response.register(self.expr())
+        if response.error:
+            return response
+        statements.append(statement)
+
+        more_statements = True
+        while True:
+            newline_count = 0
+            while self.current_token.type == TOKEN_NEWLINE:
+                response.register_advance(self.advance)
+                newline_count += 1
+            if newline_count == 0:
+                more_statements = False
+            if not more_statements:
+                break
+            statement = response.try_register(self.expr())
+            if not statement:
+                self.reverse(response.reverse_count)
+                more_statements = False
+                continue
+            statements.append(statement)
+
+        return response.success(
+            ListNode(
+                statements, position_start, self.current_token.position_start.copy()
+            )
+        )
 
     def expr(self) -> "BinaryOperationNode":
         response = ParseResult()
@@ -577,22 +718,43 @@ class Parser:
                 )
         response.register_advance(self.advance)
 
-        if self.current_token.type != TOKEN_ARROW:
+        if self.current_token.type == TOKEN_ARROW:
+            response.register_advance(self.advance)
+
+            node_to_return: "BinaryOperationNode" = response.register(self.expr())
+            if response.error:
+                return response
+
+            return response.success(
+                FunctionDefinitionNode(
+                    identifier_token, argument_name_tokens, node_to_return, False
+                )
+            )
+
+        if self.current_token.type != TOKEN_NEWLINE:
             return response.failure(
                 InvalidSyntaxError(
                     self.current_token.position_start,
                     self.current_token.position_end,
-                    "Expected '=>'",
+                    "Expected '=>' or new line",
                 )
             )
         response.register_advance(self.advance)
 
-        node_to_return: "BinaryOperationNode" = response.register(self.expr())
+        body = response.register(self.statements())
         if response.error:
             return response
 
-        return response.success(
-            FunctionDefinitionNode(
-                identifier_token, argument_name_tokens, node_to_return
+        if not self.current_token.matches(TOKEN_KEYWORD, "end"):
+            return response.failure(
+                InvalidSyntaxError(
+                    self.current_token.position_start,
+                    self.current_token.position_end,
+                    "Expected 'end'",
+                )
             )
+        response.register_advance(self.advance)
+
+        return response.success(
+            FunctionDefinitionNode(identifier_token, argument_name_tokens, body, True)
         )

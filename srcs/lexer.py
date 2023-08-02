@@ -29,6 +29,9 @@ class Lexer:
         while self.current_character:
             if self.current_character in " \t":
                 self.advance()
+            elif self.current_character in ";\n":
+                tokens.append(Token(TOKEN_NEWLINE, position_start=self.position))
+                self.advance()
             elif self.current_character in NUMERIC:
                 tokens.append(self.make_number())
             elif self.current_character in ALPHABETIC:

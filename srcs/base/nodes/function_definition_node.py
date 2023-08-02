@@ -4,7 +4,11 @@ from .binary_operation_node import BinaryOperationNode
 
 class FunctionDefinitionNode:
     def __init__(
-        self, token: "Token", arguments: list, body: "BinaryOperationNode"
+        self,
+        token: "Token",
+        arguments: list,
+        body: "BinaryOperationNode",
+        is_null: bool = False,
     ) -> None:
         self.token = token
         self.arguments = arguments
@@ -16,3 +20,4 @@ class FunctionDefinitionNode:
         else:
             self.position_start = self.body[0].position_start
         self.position_end = self.body.position_end
+        self.is_null = is_null

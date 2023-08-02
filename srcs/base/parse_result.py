@@ -7,12 +7,19 @@ class ParseResult:
         self.error = None
         self.node = None
         self.count = 0
+        self.reverse_count = 0
 
     def register(self, result: "ParseResult") -> "ParseResult":
         self.count += result.count
         if result.error:
             self.error = result.error
         return result.node
+    
+    def try_register(self, result: "ParseResult") -> "ParseResult":
+        if result.error:
+            self.reverse_count = result.count
+            return None
+        return self.register(result)
 
     def register_advance(self, advance: callable) -> None:
         self.count += 1
