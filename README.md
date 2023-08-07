@@ -4,7 +4,7 @@
 </div>
 
 ## how to run ?
-You need python3, you don't need any requirements since the language is written in plain python with no external libraries, you can either:
+You need python3, you don't need any other requirements since the language is written in plain python with no external libraries, you can either:
 
 ### run in IDE mode:
 ```bash
