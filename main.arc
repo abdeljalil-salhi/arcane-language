@@ -1,4 +1,4 @@
-# Writing the very first piece of code in the imenox language
+# Writing the very first piece of code in the arcane language
 
 clear() # Clear the screen
 print("Hello world") # Print the string "Hello world" to the screen

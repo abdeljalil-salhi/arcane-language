@@ -15,7 +15,7 @@ if __name__ == "__main__":
         exit(0)
     try:
         while True:
-            line = input("imenox > ").strip()
+            line = input("arcane > ").strip()
             if line == "":
                 continue
             elif line == "exit":
