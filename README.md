@@ -15,3 +15,6 @@ python3 main.py
 ```bash
 python3 main.py main.arc
 ```
+
+## want to see an example of arcane language ?
+Go check [main.arc](/main.arc)
